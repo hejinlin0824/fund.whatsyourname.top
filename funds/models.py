@@ -57,3 +57,22 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class DailyRecord(models.Model):
+    fund = models.ForeignKey(Fund, on_delete=models.CASCADE, related_name="records")
+    date = models.DateField()
+    profit = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # 首日可为空
+    profit_ratio = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
+    invested = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    pending = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    has_trade = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("fund", "date")
+        ordering = ["date"]
+
+    def __str__(self):
+        return f"{self.fund.name} {self.date} total={self.total}"

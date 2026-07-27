@@ -1,7 +1,7 @@
 from datetime import date
 from django.test import TestCase
 from accounts.models import User
-from funds.models import Fund, Tag
+from funds.models import Fund, Tag, DailyRecord
 
 
 class FundModelTest(TestCase):
@@ -28,3 +28,12 @@ class FundModelTest(TestCase):
             start_date=date(2026, 6, 1), start_total=0)
         self.assertTrue(f.is_dca_day(date(2026, 6, 3)))   # 周三
         self.assertFalse(f.is_dca_day(date(2026, 6, 4)))  # 周四
+
+
+class DailyRecordTest(FundModelTest):
+    def test_unique_fund_date(self):
+        f = Fund.objects.create(user=self.user, name="A", market="CN", confirm_delay=1,
+            invest_amount=5, invest_frequency="DAILY", start_date=date(2026, 6, 1), start_total=10)
+        DailyRecord.objects.create(fund=f, date=date(2026, 6, 2), profit=0.84, invested=5, has_trade=True)
+        with self.assertRaises(Exception):
+            DailyRecord.objects.create(fund=f, date=date(2026, 6, 2), profit=1, invested=5, has_trade=True)
