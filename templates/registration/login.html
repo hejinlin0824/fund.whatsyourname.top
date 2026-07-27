@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>登录 · 基金看板</title>
+</head>
+<body>
+  <h2>登录</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">登录</button>
+  </form>
+  <p><a href="{% url 'register' %}">没有账号？去注册</a></p>
+</body>
+</html>
