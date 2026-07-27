@@ -8,4 +8,5 @@ urlpatterns = [
     path("register/", views.register, name="register"),
     path("register/done/", views.register_done, name="register_done"),
     path("verify/<str:uidb64>/<str:token>/", views.verify_email, name="verify_email"),
+    path("magic/<str:token>/", views.magic_login, name="magic_login"),
 ]

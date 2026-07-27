@@ -25,3 +25,15 @@ class RegisterViewTest(TestCase):
         self.client.get(f"/accounts/verify/{uid}/{token}/")
         u.refresh_from_db()
         self.assertTrue(u.email_verified)
+
+
+class MagicLinkTest(TestCase):
+    def test_valid_token_logs_in(self):
+        u = User.objects.create_user("bob", "bob@e.com", "x")
+        resp = self.client.get(f"/accounts/magic/{u.mail_login_token}/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue("_auth_user_id" in self.client.session)
+
+    def test_invalid_token_rejected(self):
+        resp = self.client.get("/accounts/magic/nope/")
+        self.assertEqual(resp.status_code, 404)
