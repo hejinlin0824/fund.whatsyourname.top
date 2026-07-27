@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>我的基金 · 基金看板</title>
+</head>
+<body>
+  <h2>我的基金</h2>
+  <p><a href="{% url 'fund-create' %}">+ 添加基金</a> | <a href="/">返回首页</a></p>
+  {% if funds %}
+    <table border="1" cellpadding="6">
+      <tr><th>名称</th><th>代码</th><th>市场</th><th>确认延迟</th><th>定投额</th><th>频率</th><th>起购日</th><th>起点总额</th><th>操作</th></tr>
+      {% for f in funds %}
+        <tr>
+          <td>{{ f.name }}</td>
+          <td>{{ f.code|default:"—" }}</td>
+          <td>{{ f.get_market_display }}</td>
+          <td>T+{{ f.confirm_delay }}</td>
+          <td>{{ f.invest_amount }}</td>
+          <td>{{ f.get_invest_frequency_display }}</td>
+          <td>{{ f.start_date }}</td>
+          <td>{{ f.start_total }}</td>
+          <td><a href="{% url 'fund-edit' f.pk %}">编辑</a></td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>还没有基金，先 <a href="{% url 'fund-create' %}">添加一只</a>。</p>
+  {% endif %}
+</body>
+</html>
