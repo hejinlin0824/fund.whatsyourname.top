@@ -50,7 +50,7 @@ DATABASES = {"default": {
     "NAME": BASE_DIR / "db.sqlite3",
 }}
 
-# Task 2 放开：AUTH_USER_MODEL = "accounts.User"
+AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
