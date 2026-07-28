@@ -64,3 +64,56 @@ class ServicesTest(TestCase):
         self.assertTrue(r["ok"])
         r2 = S.validate_total(self.fund, _d("99"))
         self.assertFalse(r2["ok"])
+
+
+class BackfillTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("u", "u@e.com", "x")
+        self.fund = Fund.objects.create(
+            user=self.user, name="A", market="CN", confirm_delay=1,
+            invest_amount=_d(5), invest_frequency="DAILY",
+            start_date=date(2026, 6, 1), start_total=_d(10))
+
+    def test_backfill_creates_slots(self):
+        n = S.backfill_fund(self.fund, until=date(2026, 6, 5))   # 6/1..6/5 全工作日
+        self.assertEqual(n, 5)
+        recs = {r.date: r for r in self.fund.records.all()}
+        for d in [date(2026, 6, 1), date(2026, 6, 2), date(2026, 6, 3),
+                  date(2026, 6, 4), date(2026, 6, 5)]:
+            self.assertTrue(recs[d].has_trade)
+            self.assertEqual(recs[d].invested, _d(5))
+            self.assertIsNone(recs[d].profit)        # 待补录
+
+    def test_backfill_weekend_rest(self):
+        S.backfill_fund(self.fund, until=date(2026, 6, 7))       # 6/6周六 6/7周日
+        recs = {r.date: r for r in self.fund.records.all()}
+        self.assertFalse(recs[date(2026, 6, 6)].has_trade)
+        self.assertFalse(recs[date(2026, 6, 7)].has_trade)
+        self.assertEqual(recs[date(2026, 6, 6)].invested, _d(0))
+
+    def test_cascade_pending_makes_total_none(self):
+        S.backfill_fund(self.fund, until=date(2026, 6, 3))
+        recs = {r.date: r for r in self.fund.records.all()}
+        self.assertEqual(recs[date(2026, 6, 1)].total, _d(10))   # 首日恒为 start_total
+        self.assertIsNone(recs[date(2026, 6, 2)].total)          # 未补录 → None
+        self.assertIsNone(recs[date(2026, 6, 3)].total)
+
+    def test_fill_profit_computes_forward(self):
+        S.backfill_fund(self.fund, until=date(2026, 6, 3))
+        r = DailyRecord.objects.get(fund=self.fund, date=date(2026, 6, 2))
+        r.profit = _d("0.84")
+        r.save()
+        S.recompute_fund_totals(self.fund)
+        recs = {r.date: r for r in self.fund.records.all()}
+        self.assertEqual(recs[date(2026, 6, 2)].total, _d("15.84"))
+        self.assertIsNone(recs[date(2026, 6, 3)].total)          # 6/3 仍未补 → None
+
+    def test_backfill_does_not_overwrite(self):
+        S.backfill_fund(self.fund, until=date(2026, 6, 3))
+        r = DailyRecord.objects.get(fund=self.fund, date=date(2026, 6, 2))
+        r.profit = _d("0.84")
+        r.save()
+        n = S.backfill_fund(self.fund, until=date(2026, 6, 3))   # 再补齐，不应覆盖
+        self.assertEqual(n, 0)
+        r.refresh_from_db()
+        self.assertEqual(r.profit, _d("0.84"))

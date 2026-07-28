@@ -8,4 +8,5 @@ urlpatterns = [
     path("<int:pk>/data/", views.fund_detail_data, name="fund-detail-data"),
     path("<int:pk>/edit/", views.fund_edit, name="fund-edit"),
     path("daily/", views.daily_entry, name="daily-entry"),
+    path("calendar/", views.calendar_view, name="calendar"),
 ]

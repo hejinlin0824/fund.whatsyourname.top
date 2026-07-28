@@ -13,7 +13,7 @@ class FundForm(forms.ModelForm):
         model = Fund
         fields = ["name", "code", "market", "confirm_delay", "invest_amount",
                   "invest_frequency", "invest_weekday", "start_date", "start_total",
-                  "fund_type", "risk_level", "currency", "tags", "is_active"]
+                  "fund_type", "risk_level", "currency", "tags", "is_active", "end_date"]
         labels = {
             "name": "基金名称",
             "code": "基金代码",
@@ -29,6 +29,7 @@ class FundForm(forms.ModelForm):
             "currency": "币种",
             "tags": "标签",
             "is_active": "仍在定投",
+            "end_date": "终止日",
         }
         help_texts = {
             "name": "你给这只基金起的名字，方便自己识别。",
@@ -45,6 +46,7 @@ class FundForm(forms.ModelForm):
             "currency": "默认人民币。",
             "tags": "如：科技、消费、新能源。可自由添加，方便分类。",
             "is_active": "关掉后不再出现在「今日录入」（已清仓可关）。",
+            "end_date": "停止定投/清仓的日期。取消勾选「仍在定投」时填，留空默认记为今天。",
         }
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "如：易方达蓝筹精选"}),
@@ -61,12 +63,13 @@ class FundForm(forms.ModelForm):
             "currency": forms.Select(),
             "tags": forms.SelectMultiple(attrs={"size": "6"}),
             "is_active": forms.CheckboxInput(),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # 选填字段
-        for name in ["code", "invest_weekday", "fund_type", "risk_level", "currency", "tags"]:
+        for name in ["code", "invest_weekday", "fund_type", "risk_level", "currency", "tags", "end_date"]:
             self.fields[name].required = False
         # 统一套 Bootstrap 样式
         for name, field in self.fields.items():

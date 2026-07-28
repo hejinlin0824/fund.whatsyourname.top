@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}日历 · 基金看板{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <a class="btn btn-link btn-sm p-0" href="?year={{ prev_ym.0 }}&month={{ prev_ym.1 }}">‹ 上月</a>
+  <h3 class="mb-0">{{ month_label }}</h3>
+  <a class="btn btn-link btn-sm p-0" href="?year={{ next_ym.0 }}&month={{ next_ym.1 }}">下月 ›</a>
+</div>
+
+<div class="mb-3 small text-muted">
+  <span class="badge bg-success">已录全</span>
+  <span class="badge bg-warning text-dark">待补录</span>
+  <span class="badge bg-light text-dark border">休息/无</span>
+  <span class="badge bg-secondary">未来</span>
+  · 点任意日期跳到该日录入
+</div>
+
+<table class="table table-bordered text-center align-middle" style="table-layout:fixed">
+  <thead class="table-light">
+    <tr>{% for w in weekdays %}<th>{{ w }}</th>{% endfor %}</tr>
+  </thead>
+  <tbody>
+  {% for week in weeks %}
+    <tr style="height:64px">
+    {% for cell in week %}
+      <td>
+        {% if cell %}
+          {% if cell.status == 'future' %}
+            <span class="text-muted">{{ cell.date.day }}</span>
+          {% elif cell.status == 'filled' %}
+            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-success p-2">{{ cell.date.day }}</a>
+          {% elif cell.status == 'pending' %}
+            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-warning text-dark p-2">{{ cell.date.day }}</a>
+          {% else %}
+            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-light text-dark border p-2">{{ cell.date.day }}</a>
+          {% endif %}
+        {% endif %}
+      </td>
+    {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

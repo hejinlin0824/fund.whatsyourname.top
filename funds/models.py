@@ -27,6 +27,7 @@ class Fund(models.Model):
     risk_level = models.PositiveSmallIntegerField(choices=RISK_CHOICES, default=3)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="CNY")
     is_active = models.BooleanField(default=True)
+    end_date = models.DateField(null=True, blank=True)   # 终止定投/清仓日（取消「仍在定投」时设）
     tags = models.ManyToManyField("Tag", blank=True, related_name="funds")
 
     class Meta:
@@ -65,7 +66,7 @@ class DailyRecord(models.Model):
     profit = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # 首日可为空
     profit_ratio = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
     invested = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # None=未知(待补录)
     pending = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     has_trade = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

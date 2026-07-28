@@ -1,3 +1,4 @@
+import calendar as _cal
 from datetime import date as date_cls
 from decimal import Decimal
 
@@ -9,6 +10,23 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Fund, DailyRecord
 from .forms import FundForm, DailyEntryFormSet
 from . import services
+
+
+def _today(request):
+    d = request.GET.get("date")
+    return date_cls.fromisoformat(d) if d else date_cls.today()
+
+
+def _recompute_all(funds):
+    for f in funds:
+        services.recompute_fund_totals(f)
+
+
+def _finalize_end_date(fund):
+    """取消「仍在定投」且未填终止日 → 默认今天。"""
+    if not fund.is_active and not fund.end_date:
+        fund.end_date = date_cls.today()
+        fund.save()
 
 
 @login_required
@@ -25,6 +43,8 @@ def fund_create(request):
         fund.user = request.user
         fund.save()
         form.save_m2m()
+        _finalize_end_date(fund)
+        services.backfill_fund(fund)          # 从起购日补齐到今天
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
@@ -35,23 +55,15 @@ def fund_edit(request, pk):
     form = FundForm(request.POST or None, instance=fund)
     if form.is_valid():
         form.save()
+        _finalize_end_date(fund)
+        services.backfill_fund(fund)          # 起购日/终止日变了就补齐
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
 
-def _today(request):
-    d = request.GET.get("date")
-    return date_cls.fromisoformat(d) if d else date_cls.today()
-
-
-def _recompute_all(funds):
-    for f in funds:
-        services.recompute_fund_totals(f)
-
-
 @login_required
 def daily_entry(request):
-    """每日批量录入页：邮件 magic link 的落点。"""
+    """每日批量录入页：邮件 magic link 的落点，支持任意日期（补录历史）。"""
     d = _today(request)
     funds = list(Fund.objects.filter(user=request.user, is_active=True))
 
@@ -90,7 +102,7 @@ def daily_entry(request):
         invested = rec.invested if rec else (f.invest_amount if f.is_dca_day(d) else Decimal("0"))
         initial.append({
             "fund": f.id,
-            "profit": rec.profit if rec and rec.has_trade else "",
+            "profit": rec.profit if (rec and rec.has_trade and rec.profit is not None) else "",
             "profit_ratio": rec.profit_ratio if rec else "",
             "invested": invested,
         })
@@ -108,7 +120,7 @@ def dashboard(request):
     total_profit = Decimal("0")
     for f in funds:
         last = f.records.order_by("-date").first()
-        if last:
+        if last and last.total is not None:
             total_value += last.total
         total_invested += f.records.aggregate(s=Sum("invested"))["s"] or Decimal("0")
         total_profit += f.records.filter(has_trade=True).aggregate(s=Sum("profit"))["s"] or Decimal("0")
@@ -120,6 +132,55 @@ def dashboard(request):
 
 
 @login_required
+def calendar_view(request):
+    """月历：标记每天状态（已录全/待补录/未建/未来），点格子跳到该日录入。"""
+    today = date_cls.today()
+    year = int(request.GET.get("year", today.year))
+    month = int(request.GET.get("month", today.month))
+    first = date_cls(year, month, 1)
+    last_day = _cal.monthrange(year, month)[1]
+
+    recs = DailyRecord.objects.filter(fund__user=request.user,
+                                      date__year=year, date__month=month)
+    by_date = {}
+    for r in recs:
+        by_date.setdefault(r.date, []).append(r)
+
+    days = []
+    for dnum in range(1, last_day + 1):
+        dt = date_cls(year, month, dnum)
+        if dt > today:
+            status = "future"
+        elif dt in by_date:
+            rows = by_date[dt]
+            status = "pending" if any(rr.has_trade and rr.profit is None for rr in rows) else "filled"
+        else:
+            status = "empty"
+        days.append({"date": dt, "status": status})
+
+    # 组成周行（前端无需取模换行）
+    cells = [None] * first.weekday() + days
+    while len(cells) % 7 != 0:
+        cells.append(None)
+    weeks = [cells[i:i + 7] for i in range(0, len(cells), 7)]
+
+    def prev(y, m):
+        return (y, m - 1) if m > 1 else (y - 1, 12)
+
+    def nxt(y, m):
+        return (y, m + 1) if m < 12 else (y + 1, 1)
+
+    return render(request, "funds/calendar.html", {
+        "year": year, "month": month, "month_label": f"{year}年{month}月",
+        "weekdays": ["一", "二", "三", "四", "五", "六", "日"],
+        "weeks": weeks,
+        "prev_ym": prev(year, month),
+        "next_ym": nxt(year, month),
+        "today": today,
+    })
+
+
+@login_required
 def fund_detail(request, pk):
     fund = get_object_or_404(Fund, pk=pk, user=request.user)
     return render(request, "funds/fund_detail.html", {"fund": fund})
@@ -127,11 +188,11 @@ def fund_detail(request, pk):
 
 @login_required
 def fund_detail_data(request, pk):
-    """走势数据 JSON 端点（供 Chart.js fetch）。"""
+    """走势数据 JSON（Chart.js）。total 为 None 时送 null（图表留空）。"""
     fund = get_object_or_404(Fund, pk=pk, user=request.user)
     recs = fund.records.order_by("date")
     return JsonResponse({
         "dates": [r.date.isoformat() for r in recs],
-        "totals": [str(r.total) for r in recs],
-        "profits": [str(r.profit or 0) for r in recs],
+        "totals": [None if r.total is None else float(r.total) for r in recs],
+        "profits": [None if r.profit is None else float(r.profit) for r in recs],
     })
