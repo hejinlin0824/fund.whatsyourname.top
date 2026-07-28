@@ -2,37 +2,27 @@
 {% block title %}组合分析 · Whatsyour{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h4 class="section-title mb-0">组合分析</h4>
+  <h4 class="section-title">组合分析</h4>
   <a class="btn btn-outline-secondary btn-sm" href="{% url 'dashboard' %}">← 返回首页</a>
 </div>
 
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">总市值</div><div class="value">¥{{ mv|floatformat:2 }}</div></div></div>
-  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">累计投入</div><div class="value">¥{{ cost|floatformat:2 }}</div></div></div>
-  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">累计盈亏</div><div class="value {% if profit >= 0 %}pos{% else %}neg{% endif %}">{{ profit|floatformat:2 }}</div></div></div>
-  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">收益率</div><div class="value {% if roi >= 0 %}pos{% else %}neg{% endif %}">{{ roi|floatformat:2 }}%</div></div></div>
+<div class="row g-2 g-md-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">总市值</div><div class="value">¥{{ mv|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">累计投入</div><div class="value">¥{{ cost|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">累计盈亏</div><div class="value {% if profit >= 0 %}pos{% else %}neg{% endif %}">{{ profit|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">收益率</div><div class="value {% if roi >= 0 %}pos{% else %}neg{% endif %}">{{ roi|floatformat:2 }}%</div></div></div>
 </div>
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card"><div class="card-pad">
-      <h6 class="section-title mb-2">组合总市值走势</h6>
-      <div style="height:300px"><canvas id="valueChart"></canvas></div>
-    </div></div>
+    <div class="panel"><h6 class="section-title mb-2">组合总市值走势</h6><div style="height:300px"><canvas id="valueChart"></canvas></div></div>
   </div>
   <div class="col-12 col-lg-7">
-    <div class="card h-100"><div class="card-pad">
-      <h6 class="section-title mb-2">每日总盈亏 <span class="muted" style="font-size:.75rem;font-weight:400">红=盈利 · 绿=亏损</span></h6>
-      <div style="max-height:420px;overflow:auto;border-radius:.5rem">
-        <div id="barWrap" style="height:560px"><canvas id="profitBar"></canvas></div>
-      </div>
-    </div></div>
+    <div class="panel h-100"><h6 class="section-title mb-2">每日总盈亏 <span class="muted" style="font-size:.75rem;font-weight:400">红=盈利 · 绿=亏损</span></h6>
+      <div style="max-height:420px;overflow:auto"><div id="barWrap" style="height:560px"><canvas id="profitBar"></canvas></div></div></div>
   </div>
   <div class="col-12 col-lg-5">
-    <div class="card h-100"><div class="card-pad">
-      <h6 class="section-title mb-2">当前持仓占比</h6>
-      <div style="height:420px"><canvas id="allocChart"></canvas></div>
-    </div></div>
+    <div class="panel h-100"><h6 class="section-title mb-2">当前持仓占比</h6><div style="height:420px"><canvas id="allocChart"></canvas></div></div>
   </div>
 </div>
 
@@ -41,12 +31,12 @@
 let barItems=[];
 const lp={id:'bl',afterDatasetsDraw(c){const ctx=c.ctx,m=c.getDatasetMeta(0);m.data.forEach((b,i)=>{const v=barItems[i];ctx.fillStyle=v>0?'#dc2626':'#059669';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText((v>0?'+':'')+v.toFixed(2),b.x+4,b.y);});}};
 fetch("{% url 'portfolio-data' %}").then(r=>r.json()).then(d=>{
-  new Chart(document.getElementById('valueChart'),{type:'line',data:{labels:d.dates,datasets:[{label:'组合总市值',data:d.value,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.12)',fill:true,tension:.1}]},options:{maintainAspectRatio:false}});
+  new Chart(document.getElementById('valueChart'),{type:'line',data:{labels:d.dates,datasets:[{label:'组合总市值',data:d.value,borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.1}]},options:{maintainAspectRatio:false}});
   barItems=d.profit.filter(v=>v!==0);
   const dates=d.dates.filter((_,i)=>d.profit[i]!==0);
   const w=document.getElementById('barWrap');w.style.height=Math.max(200,barItems.length*22)+'px';
   new Chart(document.getElementById('profitBar'),{type:'bar',data:{labels:dates,datasets:[{data:barItems.map(v=>Math.abs(v)),backgroundColor:barItems.map(v=>v>0?'#dc2626':'#059669'),borderRadius:3,maxBarThickness:14}]},options:{indexAxis:'y',maintainAspectRatio:false,responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}},plugins:[lp]});
-  const A=d.alloc,pal=['#6366f1','#dc2626','#059669','#f59e0b','#8b5cf6','#06b6d4','#f97316','#db2777'];
+  const A=d.alloc,pal=['#4f46e5','#dc2626','#059669','#f59e0b','#8b5cf6','#06b6d4','#f97316','#db2777'];
   new Chart(document.getElementById('allocChart'),{type:'doughnut',data:{labels:A.map(a=>a.name),datasets:[{data:A.map(a=>a.value),backgroundColor:A.map((_,i)=>pal[i%pal.length])}]},options:{maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.toFixed(2)+' 元'}}}}});
 });
 </script>

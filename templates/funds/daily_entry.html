@@ -1,53 +1,45 @@
 {% extends "base.html" %}
 {% block title %}录入 · {{ date }} · Whatsyour{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div class="d-flex align-items-center gap-2">
     {% if prev_date %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'daily-entry' %}?date={{ prev_date.isoformat }}">‹ 前一天</a>{% endif %}
-    <span class="value" style="font-size:1.25rem">{{ date }}</span>
+    <span class="section-title">{{ date }}</span>
     {% if next_date %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'daily-entry' %}?date={{ next_date.isoformat }}">下一天 ›</a>{% endif %}
   </div>
   <a class="btn btn-outline-primary btn-sm" href="{% url 'fund-create' %}">+ 添加新基金</a>
 </div>
 
-{% if saved %}<div class="alert alert-success py-2 mb-3">{{ date }} 保存成功</div>{% endif %}
+{% if saved %}<div class="alert alert-success py-2">{{ date }} 保存成功</div>{% endif %}
 
-<div class="card">
-  <div class="card-pad">
+<div class="panel">
   <form method="post">
     {% csrf_token %}
     {{ formset.management_form }}
     {% if pairs %}
     <div class="table-responsive">
     <table class="table align-middle mb-3">
-      <thead><tr><th>基金</th><th style="width:140px">今日投入</th><th style="width:140px">今日盈亏</th><th style="width:140px">比例(选填)</th></tr></thead>
+      <thead><tr><th>基金</th><th style="width:150px">今日投入</th><th style="width:150px">今日盈亏</th><th style="width:150px">比例(选填)</th></tr></thead>
       <tbody>
       {% for form, fund in pairs %}
         <tr>
-          <td>
-            <strong>{{ fund.name }}</strong>
-            <div class="muted" style="font-size:.75rem">{{ fund.get_invest_frequency_display }} · {{ fund.invest_amount }} · T+{{ fund.confirm_delay }}</div>
-            {{ form.fund }}
-          </td>
-          <td>{{ form.invested }}</td>
-          <td>{{ form.profit }}</td>
-          <td>{{ form.profit_ratio }}</td>
+          <td><strong>{{ fund.name }}</strong><div class="muted" style="font-size:.73rem">{{ fund.get_invest_frequency_display }} · {{ fund.invest_amount }} · T+{{ fund.confirm_delay }}</div>{{ form.fund }}</td>
+          <td>{{ form.invested }}</td><td>{{ form.profit }}</td><td>{{ form.profit_ratio }}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
       <button type="submit" name="action" value="save" class="btn btn-primary">保存</button>
       <button type="submit" name="action" value="no_trade" formnovalidate class="btn btn-outline-secondary">今日无交易</button>
-      <a class="btn btn-link" href="{% url 'calendar' %}">回日历</a>
-      <a class="btn btn-link" href="{% url 'dashboard' %}">回首页</a>
+      <a class="btn btn-outline-secondary" href="{% url 'calendar' %}">日历</a>
+      <a class="btn btn-outline-secondary" href="{% url 'dashboard' %}">首页</a>
     </div>
-    <div class="muted mt-2" style="font-size:.78rem">保存后会留在本日并提示成功，点上方「下一天」继续补录。</div>
+    <div class="muted mt-2" style="font-size:.78rem">保存后留在本日并提示成功，点上方「下一天」继续补录。</div>
     {% else %}
     <p class="muted py-3 mb-0">没有在投的基金。先 <a href="{% url 'fund-create' %}">添加一只</a>。</p>
     {% endif %}
   </form>
-  </div>
 </div>
 {% endblock %}

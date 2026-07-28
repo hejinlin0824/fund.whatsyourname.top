@@ -1,39 +1,33 @@
 {% extends "base.html" %}
-{% block title %}日历 · 基金看板{% endblock %}
+{% block title %}日历 · Whatsyour{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <a class="btn btn-outline-secondary btn-sm" href="?year={{ prev_ym.0 }}&month={{ prev_ym.1 }}">‹ 上月</a>
-  <h4 class="section-title mb-0">{{ month_label }}</h4>
+  <h4 class="section-title">{{ month_label }}</h4>
   <a class="btn btn-outline-secondary btn-sm" href="?year={{ next_ym.0 }}&month={{ next_ym.1 }}">下月 ›</a>
 </div>
 
-<div class="mb-3 d-flex gap-2 flex-wrap" style="font-size:.8rem;">
-  <span class="badge rounded-pill" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0">已录全</span>
-  <span class="badge rounded-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a">待补录</span>
-  <span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0">无交易</span>
-  <span class="badge rounded-pill" style="background:#fff;color:#94a3b8;border:1px solid #eef0f4">未建</span>
-  <span class="ms-2 muted align-self-center">红字=当日盈利 · 绿字=当日亏损 · 点格子跳转录入</span>
+<div class="mb-3 small">
+  <span class="me-3"><span style="display:inline-block;width:12px;height:12px;background:#fee2e2;border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 盈利</span>
+  <span class="me-3"><span style="display:inline-block;width:12px;height:12px;background:#dcfce7;border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 亏损</span>
+  <span class="me-3"><span style="display:inline-block;width:12px;height:12px;background:#fffbeb;border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 待补录</span>
+  <span class="muted">点格子跳转录入</span>
 </div>
 
-<table class="table table-bordered cal align-middle text-center">
-  <thead class="table-light">
-    <tr>{% for w in weekdays %}<th>{{ w }}</th>{% endfor %}</tr>
-  </thead>
+<table class="table cal text-center align-middle">
+  <thead><tr>{% for w in weekdays %}<th>{{ w }}</th>{% endfor %}</tr></thead>
   <tbody>
   {% for week in weeks %}
     <tr>
     {% for cell in week %}
-      <td>
+      <td class="{% if cell %}{% if cell.status == 'future' %}cal-future{% elif cell.pcls == 'up' %}cal-up{% elif cell.pcls == 'down' %}cal-down{% elif cell.status == 'pending' %}cal-pending{% else %}cal-zero{% endif %}{% if cell.date == today %} today{% endif %}{% endif %}">
         {% if cell %}
           {% if cell.status == 'future' %}
-            <div class="cal-future"><span class="d">{{ cell.date.day }}</span></div>
+            <span class="d">{{ cell.date.day }}</span>
           {% else %}
-            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}"
-               class="cal-{{ cell.status }} {% if cell.date == today %}today{% endif %}">
+            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}">
               <span class="d">{{ cell.date.day }}</span>
-              {% if cell.profit %}
-                <span class="p {{ cell.pcls }}">{{ cell.profit|floatformat:2 }}</span>
-              {% endif %}
+              {% if cell.profit %}<span class="p">{{ cell.profit|floatformat:2 }}</span>{% endif %}
             </a>
           {% endif %}
         {% endif %}

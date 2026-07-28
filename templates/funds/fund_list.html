@@ -2,38 +2,34 @@
 {% block title %}我的基金 · Whatsyour{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h4 class="section-title mb-0">我的基金</h4>
+  <h4 class="section-title">我的基金</h4>
   <a class="btn btn-primary btn-sm" href="{% url 'fund-create' %}">+ 添加基金</a>
 </div>
-
-<div class="card">
-  <div class="card-pad">
-    <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead><tr class="text-muted small"><th>基金</th><th>市场</th><th>最新总额</th><th>累计投入</th><th>累计盈亏</th><th>收益率</th><th>起购日</th><th></th></tr></thead>
-      <tbody>
-      {% for f, s in rows %}
-        <tr>
-          <td>{{ f.name }}{% if f.code %}<div class="muted" style="font-size:.72rem">{{ f.code }}</div>{% endif %}
-            {% if f.is_cleared %}<span class="badge bg-dark ms-1">已清仓</span>{% elif not f.is_active %}<span class="badge bg-secondary ms-1">已停投</span>{% endif %}
-          </td>
-          <td><small>{{ f.get_market_display }}</small></td>
-          <td>{{ s.mv|floatformat:2 }}</td>
-          <td>{{ s.cost|floatformat:2 }}</td>
-          <td class="{% if s.profit >= 0 %}pos{% else %}neg{% endif %}">{{ s.profit|floatformat:2 }}</td>
-          <td class="{% if s.roi >= 0 %}pos{% else %}neg{% endif %}">{{ s.roi|floatformat:2 }}%</td>
-          <td><small>{{ f.start_date }}</small></td>
-          <td class="text-end text-nowrap">
-            <a class="btn btn-outline-primary btn-sm" href="{% url 'fund-detail' f.pk %}">走势</a>
-            <a class="btn btn-outline-secondary btn-sm" href="{% url 'fund-edit' f.pk %}">编辑</a>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="8" class="text-center muted py-4">还没有基金，先 <a href="{% url 'fund-create' %}">添加一只</a>。</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    </div>
+<div class="panel">
+  <div class="table-responsive">
+  <table class="table table-hover align-middle mb-0">
+    <thead><tr><th>基金</th><th>市场</th><th>最新总额</th><th>投入</th><th>盈亏</th><th>收益率</th><th>起购日</th><th></th></tr></thead>
+    <tbody>
+    {% for f, s in rows %}
+      <tr>
+        <td>{{ f.name }}{% if f.code %}<div class="muted" style="font-size:.7rem">{{ f.code }}</div>{% endif %}
+          {% if f.is_cleared %}<span class="badge bg-dark ms-1">清仓</span>{% elif not f.is_active %}<span class="badge bg-secondary ms-1">停投</span>{% endif %}</td>
+        <td><small class="muted">{{ f.get_market_display }}</small></td>
+        <td>{{ s.mv|floatformat:2 }}</td>
+        <td>{{ s.cost|floatformat:2 }}</td>
+        <td class="{% if s.profit >= 0 %}pos{% else %}neg{% endif %}">{{ s.profit|floatformat:2 }}</td>
+        <td class="{% if s.roi >= 0 %}pos{% else %}neg{% endif %}">{{ s.roi|floatformat:2 }}%</td>
+        <td><small class="muted">{{ f.start_date }}</small></td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'fund-detail' f.pk %}">走势</a>
+          <a class="btn btn-outline-secondary btn-sm" href="{% url 'fund-edit' f.pk %}">编辑</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8" class="text-center muted py-4">还没有基金，先 <a href="{% url 'fund-create' %}">添加一只</a>。</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
   </div>
 </div>
 {% endblock %}

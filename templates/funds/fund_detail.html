@@ -3,55 +3,46 @@
 {% block content %}
 <a class="btn btn-link btn-sm p-0 mb-2" href="{% url 'dashboard' %}">← 返回</a>
 
-<div class="card mb-3">
-  <div class="card-pad">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-      <div>
-        <h4 class="section-title mb-1">{{ fund.name }}
-          {% if fund.code %}<small class="text-muted" style="font-size:.7em">{{ fund.code }}</small>{% endif %}
-        </h4>
-        <div class="muted" style="font-size:.8rem">{{ fund.get_market_display }} · T+{{ fund.confirm_delay }} · {{ fund.get_invest_frequency_display }}{{ fund.invest_amount }}{% if fund.fee_rate %} · 费率{{ fund.fee_rate }}%{% endif %}</div>
-        <div class="muted" style="font-size:.75rem">起购日 {{ fund.start_date }}{% if fund.end_date %} · {% if fund.is_cleared %}清仓{% else %}停投{% endif %} {{ fund.end_date }}{% endif %}{% if s.last_date %} · 截至 {{ s.last_date }}{% endif %}</div>
-      </div>
-      <a class="btn btn-outline-secondary btn-sm" href="{% url 'fund-edit' fund.pk %}">编辑</a>
+<div class="panel mb-3">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <div>
+      <h4 class="section-title">{{ fund.name }}{% if fund.code %} <small class="muted" style="font-size:.65em">{{ fund.code }}</small>{% endif %}</h4>
+      <div class="muted" style="font-size:.8rem">{{ fund.get_market_display }} · T+{{ fund.confirm_delay }} · {{ fund.get_invest_frequency_display }}{{ fund.invest_amount }}{% if fund.fee_rate %} · 费率{{ fund.fee_rate }}%{% endif %} · 起购 {{ fund.start_date }}{% if s.last_date %} · 截至 {{ s.last_date }}{% endif %}</div>
     </div>
-    <div class="row g-3 mt-1">
-      <div class="col-6 col-md-3 stat"><div class="label">最新总额</div><div class="value">{{ s.mv|floatformat:2 }}</div></div>
-      <div class="col-6 col-md-3 stat"><div class="label">累计投入</div><div class="value">¥{{ s.cost|floatformat:2 }}</div></div>
-      <div class="col-6 col-md-3 stat"><div class="label">累计盈亏</div><div class="value {% if s.profit >= 0 %}pos{% else %}neg{% endif %}">{{ s.profit|floatformat:2 }}</div></div>
-      <div class="col-6 col-md-3 stat"><div class="label">收益率</div><div class="value {% if s.roi >= 0 %}pos{% else %}neg{% endif %}">{{ s.roi|floatformat:2 }}%</div></div>
-    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'fund-edit' fund.pk %}">编辑</a>
+  </div>
+  <div class="row g-3 mt-1">
+    <div class="col-6 col-lg-3 stat"><div class="label">最新总额</div><div class="value">{{ s.mv|floatformat:2 }}</div></div>
+    <div class="col-6 col-lg-3 stat"><div class="label">累计投入</div><div class="value">¥{{ s.cost|floatformat:2 }}</div></div>
+    <div class="col-6 col-lg-3 stat"><div class="label">累计盈亏</div><div class="value {% if s.profit >= 0 %}pos{% else %}neg{% endif %}">{{ s.profit|floatformat:2 }}</div></div>
+    <div class="col-6 col-lg-3 stat"><div class="label">收益率</div><div class="value {% if s.roi >= 0 %}pos{% else %}neg{% endif %}">{{ s.roi|floatformat:2 }}%</div></div>
   </div>
 </div>
 
-<div class="card mb-3">
-  <div class="card-pad">
-    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
-      <h6 class="section-title mb-0">走势曲线</h6>
-      <div class="d-flex gap-2 flex-wrap">
-        <div class="btn-group btn-group-sm">
-          <button type="button" class="btn btn-outline-secondary" data-view="day" onclick="setView('day')">日</button>
-          <button type="button" class="btn btn-outline-secondary" data-view="week" onclick="setView('week')">周</button>
-          <button type="button" class="btn btn-outline-secondary" data-view="month" onclick="setView('month')">月</button>
-        </div>
-        <div class="btn-group btn-group-sm">
-          <button type="button" class="btn btn-outline-secondary" data-metric="total" onclick="setMetric('total')">总额</button>
-          <button type="button" class="btn btn-outline-secondary" data-metric="profit" onclick="setMetric('profit')">盈亏</button>
-          <button type="button" class="btn btn-outline-secondary" data-metric="invested" onclick="setMetric('invested')">投入</button>
-          <button type="button" class="btn btn-outline-secondary" data-metric="all" onclick="setMetric('all')">全部</button>
-        </div>
+<div class="panel mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap mb-2 gap-2">
+    <h6 class="section-title">走势曲线</h6>
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-secondary" data-view="day" onclick="setView('day')">日</button>
+        <button type="button" class="btn btn-outline-secondary" data-view="week" onclick="setView('week')">周</button>
+        <button type="button" class="btn btn-outline-secondary" data-view="month" onclick="setView('month')">月</button>
+      </div>
+      <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-secondary" data-metric="total" onclick="setMetric('total')">总额</button>
+        <button type="button" class="btn btn-outline-secondary" data-metric="profit" onclick="setMetric('profit')">盈亏</button>
+        <button type="button" class="btn btn-outline-secondary" data-metric="invested" onclick="setMetric('invested')">投入</button>
+        <button type="button" class="btn btn-outline-secondary" data-metric="all" onclick="setMetric('all')">全部</button>
       </div>
     </div>
-    <div style="height:340px"><canvas id="trendChart"></canvas></div>
   </div>
+  <div style="height:340px"><canvas id="trendChart"></canvas></div>
 </div>
 
-<div class="card">
-  <div class="card-pad">
-    <h6 class="section-title mb-2">每日盈亏 <span class="muted" style="font-size:.75rem;font-weight:400">红=盈利 · 绿=亏损 · 按最大绝对值等比</span></h6>
-    <div style="max-height:520px;overflow:auto;border-radius:.5rem">
-      <div id="barWrap" style="height:600px"><canvas id="profitBar"></canvas></div>
-    </div>
+<div class="panel">
+  <h6 class="section-title mb-2">每日盈亏 <span class="muted" style="font-size:.75rem;font-weight:400">红=盈利 · 绿=亏损</span></h6>
+  <div style="max-height:520px;overflow:auto">
+    <div id="barWrap" style="height:600px"><canvas id="profitBar"></canvas></div>
   </div>
 </div>
 
@@ -63,10 +54,10 @@ function setView(v){view=v;syncBtns('view',v);if(allData)render();}
 function setMetric(m){metric=m;syncBtns('metric',m);if(allData)render();}
 function bucketKey(iso,by){const[y,m]=iso.split('-').map(Number);if(by==='month')return`${y}-${String(m).padStart(2,'0')}`;const t=new Date(Date.UTC(y,m-1,1));const dn=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-dn+3);const ft=new Date(Date.UTC(t.getUTCFullYear(),0,4));const w=1+Math.round(((t-ft)/86400000-3+((ft.getUTCDay()+6)%7))/7);return`${t.getUTCFullYear()}-W${String(w).padStart(2,'0')}`;}
 function aggregate(by){if(by==='day')return{labels:allData.dates,total:allData.totals,profit:allData.profits,invested:allData.invested};const o=[],t={},p={},i={};allData.dates.forEach((iso,idx)=>{const k=bucketKey(iso,by);if(!(k in t)){o.push(k);t[k]=allData.totals[idx];p[k]=0;i[k]=0;}else{t[k]=allData.totals[idx];}p[k]+=parseFloat(allData.profits[idx]||0);i[k]+=parseFloat(allData.invested[idx]||0);});return{labels:o,total:o.map(k=>t[k]),profit:o.map(k=>p[k].toFixed(2)),invested:o.map(k=>i[k].toFixed(2))};}
-const SERIES={total:{label:'总额',color:'#6366f1',fill:true},profit:{label:'当日盈亏',color:'#dc2626',fill:false},invested:{label:'当日投入',color:'#059669',fill:false}};
+const SERIES={total:{label:'总额',color:'#4f46e5',fill:true},profit:{label:'当日盈亏',color:'#dc2626',fill:false},invested:{label:'当日投入',color:'#059669',fill:false}};
 function render(){const g=aggregate(view);const w=metric==='all'?['total','profit','invested']:[metric];const ds=w.map(k=>({label:SERIES[k].label,data:g[k],borderColor:SERIES[k].color,backgroundColor:SERIES[k].color+'22',tension:.1,fill:SERIES[k].fill}));if(chart)chart.destroy();chart=new Chart(document.getElementById('trendChart'),{type:'line',data:{labels:g.labels,datasets:ds},options:{maintainAspectRatio:false,scales:{y:{position:'left'}}}});}
 const barLabelPlugin={id:'bl',afterDatasetsDraw(c){const ctx=c.ctx,m=c.getDatasetMeta(0);m.data.forEach((b,i)=>{const v=barItems[i];ctx.fillStyle=v>0?'#dc2626':'#059669';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText((v>0?'+':'')+v.toFixed(2),b.x+4,b.y);});}};
-function renderBars(){barItems=[];allData.dates.forEach((iso,i)=>{const p=allData.profits[i];if(p!==null&&p!==undefined&&parseFloat(p)!==0)barItems.push(parseFloat(p));});const dates=allData.dates.filter((_,i)=>allData.profits[i]!==null&&parseFloat(allData.profits[i]||0)!==0);const w=document.getElementById('barWrap');w.style.height=Math.max(200,barItems.length*22)+'px';if(barChart)barChart.destroy();if(barItems.length===0){w.innerHTML='<p class="muted p-2 mb-0">没有盈亏数据</p>';return;}barChart=new Chart(document.getElementById('profitBar'),{type:'bar',data:{labels:dates,datasets:[{data:barItems.map(v=>Math.abs(v)),backgroundColor:barItems.map(v=>v>0?'#dc2626':'#059669'),borderRadius:3,maxBarThickness:14}]},options:{indexAxis:'y',maintainAspectRatio:false,responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(barItems[c.dataIndex]>0?'+':'')+barItems[c.dataIndex].toFixed(2)}}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}},plugins:[barLabelPlugin]});}
+function renderBars(){barItems=[];const dates=[];allData.dates.forEach((iso,i)=>{const p=allData.profits[i];if(p!==null&&p!==undefined&&parseFloat(p)!==0){barItems.push(parseFloat(p));dates.push(iso);}});const w=document.getElementById('barWrap');w.style.height=Math.max(200,barItems.length*22)+'px';if(barChart)barChart.destroy();if(barItems.length===0){w.innerHTML='<p class="muted p-2 mb-0">没有盈亏数据</p>';return;}barChart=new Chart(document.getElementById('profitBar'),{type:'bar',data:{labels:dates,datasets:[{data:barItems.map(v=>Math.abs(v)),backgroundColor:barItems.map(v=>v>0?'#dc2626':'#059669'),borderRadius:3,maxBarThickness:14}]},options:{indexAxis:'y',maintainAspectRatio:false,responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(barItems[c.dataIndex]>0?'+':'')+barItems[c.dataIndex].toFixed(2)}}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}},plugins:[barLabelPlugin]});}
 fetch("{% url 'fund-detail-data' fund.pk %}").then(r=>r.json()).then(d=>{allData=d;syncBtns('view','day');syncBtns('metric','total');if(allData.dates.length===0){document.getElementById('trendChart').parentElement.innerHTML='<p class="muted">还没有录入数据。</p>';return;}render();renderBars();});
 </script>
 {% endblock %}
