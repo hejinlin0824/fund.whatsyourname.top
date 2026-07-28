@@ -183,7 +183,12 @@ def calendar_view(request):
             status = "future"
         elif dt in by_date:
             rows = by_date[dt]
-            status = "pending" if any(rr.has_trade and rr.profit is None for rr in rows) else "filled"
+            if any(r.has_trade and r.profit is None for r in rows):
+                status = "pending"     # 交易日但盈亏未补
+            elif any(r.has_trade for r in rows):
+                status = "filled"      # 交易日已填
+            else:
+                status = "rest"        # 全是无交易（周末/标记休息）
         else:
             status = "empty"
         days.append({"date": dt, "status": status})

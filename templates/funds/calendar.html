@@ -10,8 +10,8 @@
 <div class="mb-3 small text-muted">
   <span class="badge bg-success">已录全</span>
   <span class="badge bg-warning text-dark">待补录</span>
-  <span class="badge bg-light text-dark border">休息/无</span>
-  <span class="badge bg-secondary">未来</span>
+  <span class="badge bg-secondary">无交易/休</span>
+  <span class="badge bg-light text-dark border">未建</span>
   · 点任意日期跳到该日录入
 </div>
 
@@ -31,6 +31,8 @@
             <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-success p-2">{{ cell.date.day }}</a>
           {% elif cell.status == 'pending' %}
             <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-warning text-dark p-2">{{ cell.date.day }}</a>
+          {% elif cell.status == 'rest' %}
+            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-secondary p-2">{{ cell.date.day }}</a>
           {% else %}
             <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-light text-dark border p-2">{{ cell.date.day }}</a>
           {% endif %}
