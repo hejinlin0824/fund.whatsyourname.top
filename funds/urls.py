@@ -9,4 +9,6 @@ urlpatterns = [
     path("<int:pk>/edit/", views.fund_edit, name="fund-edit"),
     path("daily/", views.daily_entry, name="daily-entry"),
     path("calendar/", views.calendar_view, name="calendar"),
+    path("portfolio/", views.portfolio, name="portfolio"),
+    path("portfolio/data/", views.portfolio_data, name="portfolio-data"),
 ]

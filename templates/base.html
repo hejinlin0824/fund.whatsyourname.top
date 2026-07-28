@@ -9,13 +9,14 @@
 <body>
   <nav class="navbar navbar-expand-sm navbar-dark bg-dark mb-4">
     <div class="container">
-      <a class="navbar-brand" href="{% url 'dashboard' %}">📈 基金看板</a>
+      <a class="navbar-brand" href="{% url 'dashboard' %}">基金看板</a>
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">首页</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'fund-list' %}">基金</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'daily-entry' %}">今日录入</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'calendar' %}">日历</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'portfolio' %}">组合</a></li>
         </ul>
         {% if user.is_authenticated %}
           <span class="navbar-text text-light me-3">{{ user.username }}</span>

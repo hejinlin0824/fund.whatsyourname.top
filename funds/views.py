@@ -38,7 +38,6 @@ def _prev_trading_day(d):
 
 
 def _finalize_end_date(fund):
-    """停投或清仓且未填日期 → 默认今天。手动填的尊重用户。"""
     if not fund.end_date and (not fund.is_active or fund.is_cleared):
         fund.end_date = date_cls.today()
         fund.save()
@@ -60,6 +59,7 @@ def fund_create(request):
         form.save_m2m()
         _finalize_end_date(fund)
         services.backfill_fund(fund)
+        services.recompute_fund_totals(fund)
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
@@ -72,13 +72,13 @@ def fund_edit(request, pk):
         fund = form.save()
         _finalize_end_date(fund)
         services.backfill_fund(fund)
+        services.recompute_fund_totals(fund)   # 费率/起购等改动强制重算
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
 
 @login_required
 def daily_entry(request):
-    """每日批量录入页：未清仓的基金都显示（含已停投，其投入自动 0）。"""
     d = _today(request)
     funds = list(Fund.objects.filter(user=request.user, is_cleared=False, start_date__lte=d))
     saved_back = reverse("daily-entry") + f"?date={d.isoformat()}&saved=1"
@@ -229,4 +229,39 @@ def fund_detail_data(request, pk):
         "totals": [None if r.total is None else float(r.total) for r in recs],
         "profits": [None if r.profit is None else float(r.profit) for r in recs],
         "invested": [float(r.invested) for r in recs],
+    })
+
+
+@login_required
+def portfolio(request):
+    return render(request, "funds/portfolio.html")
+
+
+@login_required
+def portfolio_data(request):
+    """组合级数据：每日总市值（各基金 carry-forward 之和）、每日总盈亏、当前各基金占比。"""
+    funds = list(Fund.objects.filter(user=request.user).order_by("id"))
+    fund_recs = {f.id: dict(f.records.exclude(total__isnull=True)
+                            .order_by("date").values_list("date", "total")) for f in funds}
+    all_dates = sorted(set(DailyRecord.objects.filter(fund__user=request.user)
+                           .values_list("date", flat=True)))
+    profit_by_date = {}
+    for f in funds:
+        for d, p in f.records.exclude(profit__isnull=True).values_list("date", "profit"):
+            profit_by_date[d] = profit_by_date.get(d, Decimal("0")) + Decimal(p)
+
+    last = {f.id: None for f in funds}
+    labels, port_value, port_profit = [], [], []
+    for d in all_dates:
+        for f in funds:
+            if d in fund_recs[f.id]:
+                last[f.id] = fund_recs[f.id][d]
+        val = sum((v for v in last.values() if v is not None), Decimal("0"))
+        labels.append(d.isoformat())
+        port_value.append(float(val))
+        port_profit.append(float(profit_by_date.get(d, Decimal("0"))))
+
+    alloc = [{"name": f.name, "value": float(last[f.id] or 0)} for f in funds if (last[f.id] or 0) > 0]
+    return JsonResponse({
+        "dates": labels, "value": port_value, "profit": port_profit, "alloc": alloc,
     })

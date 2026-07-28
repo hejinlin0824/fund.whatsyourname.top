@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}组合分析 · 基金看板{% endblock %}
+{% block content %}
+<h3 class="mb-3">组合分析</h3>
+
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card p-3">
+      <h5 class="mb-2">组合总市值走势</h5>
+      <div style="height:320px"><canvas id="valueChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card p-3">
+      <h5 class="mb-2">每日总盈亏（红=正 / 绿=负）</h5>
+      <div style="max-height:460px;overflow:auto;border:1px solid #dee2e6;border-radius:.375rem;padding:.5rem">
+        <div id="barWrap" style="height:600px"><canvas id="profitBar"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="card p-3 h-100">
+      <h5 class="mb-2">当前持仓占比</h5>
+      <div style="height:320px"><canvas id="allocChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+let barItems = [];
+const labelPlugin = {
+  id: 'barLabels',
+  afterDatasetsDraw(c){
+    const ctx = c.ctx, meta = c.getDatasetMeta(0);
+    meta.data.forEach((bar,i) => {
+      const v = barItems[i];
+      ctx.save();
+      ctx.fillStyle = v > 0 ? '#dc3545' : '#198754';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText((v>0?'+':'') + v.toFixed(2), bar.x + 4, bar.y);
+      ctx.restore();
+    });
+  }
+};
+
+fetch("{% url 'portfolio-data' %}").then(r=>r.json()).then(d=>{
+  // 1. 总市值走势
+  new Chart(document.getElementById('valueChart'), {
+    type:'line',
+    data:{ labels:d.dates, datasets:[{
+      label:'组合总市值', data:d.value, borderColor:'#0d6efd',
+      backgroundColor:'rgba(13,110,253,.1)', fill:true, tension:0.1
+    }]},
+    options:{ maintainAspectRatio:false, scales:{ y:{ beginAtZero:false } } }
+  });
+
+  // 2. 每日总盈亏（横向，红/绿，按最大绝对值等比）
+  barItems = d.profit.filter(v => v !== 0);
+  const barDates = d.dates.filter((_,i) => d.profit[i] !== 0);
+  const wrap = document.getElementById('barWrap');
+  wrap.style.height = Math.max(200, barItems.length * 22) + 'px';
+  new Chart(document.getElementById('profitBar'), {
+    type:'bar',
+    data:{ labels:barDates, datasets:[{
+      data: barItems.map(v => Math.abs(v)),
+      backgroundColor: barItems.map(v => v > 0 ? '#dc3545' : '#198754'),
+      borderRadius: 3, maxBarThickness: 14,
+    }]},
+    options:{
+      indexAxis:'y', maintainAspectRatio:false, responsive:true,
+      plugins:{ legend:{display:false} },
+      scales:{ x:{ beginAtZero:true }, y:{ ticks:{ font:{size:10} } } }
+    },
+    plugins:[labelPlugin]
+  });
+
+  // 3. 占比圆盘
+  const alloc = d.alloc;
+  const palette = ['#0d6efd','#dc3545','#198754','#ffc107','#6f42c1','#0dcaf0','#fd7e14','#d63384'];
+  new Chart(document.getElementById('allocChart'), {
+    type:'doughnut',
+    data:{ labels: alloc.map(a=>a.name), datasets:[{
+      data: alloc.map(a=>a.value),
+      backgroundColor: alloc.map((_,i)=>palette[i % palette.length]),
+    }]},
+    options:{ maintainAspectRatio:false, plugins:{ legend:{ position:'right' } },
+      tooltip:{ callbacks:{ label: ctx => ctx.label + ': ' + ctx.parsed.toFixed(2) + ' 元' } } }
+  });
+});
+</script>
+{% endblock %}

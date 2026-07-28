@@ -6,7 +6,7 @@
     {% if prev_date %}
       <a class="btn btn-outline-secondary btn-sm" href="{% url 'daily-entry' %}?date={{ prev_date.isoformat }}">‹ 前一天</a>
     {% endif %}
-    <span class="mx-2 h5 mb-0 align-middle">📅 {{ date }}</span>
+    <span class="mx-2 h5 mb-0 align-middle">{{ date }}</span>
     {% if next_date %}
       <a class="btn btn-outline-secondary btn-sm" href="{% url 'daily-entry' %}?date={{ next_date.isoformat }}">下一天 ›</a>
     {% endif %}
@@ -14,7 +14,7 @@
   <a class="btn btn-outline-primary btn-sm" href="{% url 'fund-create' %}">+ 添加新基金</a>
 </div>
 
-{% if saved %}<div class="alert alert-success py-2">✅ {{ date }} 保存成功</div>{% endif %}
+{% if saved %}<div class="alert alert-success py-2">{{ date }} 保存成功</div>{% endif %}
 
 <form method="post">
   {% csrf_token %}
@@ -39,7 +39,7 @@
     </tbody>
   </table>
   <div class="d-flex gap-2 mb-3">
-    <button type="submit" name="action" value="save" class="btn btn-primary">💾 保存</button>
+    <button type="submit" name="action" value="save" class="btn btn-primary">保存</button>
     <button type="submit" name="action" value="no_trade" formnovalidate class="btn btn-outline-secondary">今日无交易</button>
   </div>
   <div class="text-muted small">保存后会留在本日并提示成功，点上方「下一天」继续补录。</div>
@@ -48,5 +48,5 @@
   {% endif %}
 </form>
 
-<p><a href="{% url 'calendar' %}">📅 回日历</a> | <a href="/">回首页</a></p>
+<p><a href="{% url 'calendar' %}">回日历</a> | <a href="/">回首页</a></p>
 {% endblock %}
