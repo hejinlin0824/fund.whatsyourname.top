@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 · 基金看板{% endblock %}
+{% block content %}
+<h3 class="mb-3">组合总览</h3>
+<div class="row text-center mb-4 g-3">
+  <div class="col-md-3"><div class="card text-bg-primary p-3"><div class="small">总市值</div><div class="h4 mb-0">¥{{ total_value }}</div></div></div>
+  <div class="col-md-3"><div class="card text-bg-secondary p-3"><div class="small">累计投入</div><div class="h4 mb-0">¥{{ total_invested }}</div></div></div>
+  <div class="col-md-3"><div class="card {% if total_profit >= 0 %}text-bg-success{% else %}text-bg-danger{% endif %} p-3"><div class="small">累计盈亏</div><div class="h4 mb-0">{{ total_profit }}</div></div></div>
+  <div class="col-md-3"><div class="card text-bg-info p-3"><div class="small">收益率</div><div class="h4 mb-0">{{ ratio|floatformat:2 }}%</div></div></div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h3 class="mb-0">我的基金</h3>
+  <a class="btn btn-primary btn-sm" href="{% url 'fund-create' %}">+ 添加基金</a>
+</div>
+<table class="table table-striped align-middle">
+  <thead><tr><th>名称</th><th>市场</th><th>最新总额</th><th>待确认</th><th>起购日</th><th></th></tr></thead>
+  <tbody>
+  {% for f in funds %}
+    {% with last=f.records.last %}
+    <tr>
+      <td>{{ f.name }}{% if f.code %} <small class="text-muted">{{ f.code }}</small>{% endif %}</td>
+      <td>{{ f.get_market_display }}</td>
+      <td>{% if last %}{{ last.total }}（待确认 {{ last.pending }}）{% else %}<span class="text-muted">—</span>{% endif %}</td>
+      <td>{% if last %}{{ last.pending }}{% else %}—{% endif %}</td>
+      <td>{{ f.start_date }}</td>
+      <td><a class="btn btn-outline-primary btn-sm" href="{% url 'fund-detail' f.pk %}">走势 →</a></td>
+    </tr>
+    {% endwith %}
+  {% empty %}
+    <tr><td colspan="6" class="text-center text-muted py-4">还没有基金，<a href="{% url 'fund-create' %}">添加第一只</a></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

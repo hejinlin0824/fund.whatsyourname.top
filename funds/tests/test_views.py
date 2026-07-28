@@ -61,3 +61,30 @@ class DailyEntryTest(FundCrudTest):
         self.assertEqual(resp.status_code, 302)
         r = DailyRecord.objects.get(fund=fund, date=date(2026, 6, 7))
         self.assertFalse(r.has_trade)
+
+
+class DashboardTest(FundCrudTest):
+    def _fund_with_record(self):
+        f = Fund.objects.create(user=self.u, name="A", market="CN", confirm_delay=1,
+            invest_amount=Decimal("5"), invest_frequency="DAILY",
+            start_date=date(2026, 6, 1), start_total=Decimal("10"))
+        DailyRecord.objects.create(fund=f, date=date(2026, 6, 1),
+                                   invested=Decimal("5"), total=Decimal("10"))
+        return f
+
+    def test_dashboard_shows_totals(self):
+        self._fund_with_record()
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "总市值")
+
+    def test_fund_detail_page_html(self):
+        f = self._fund_with_record()
+        resp = self.client.get(f"/funds/{f.pk}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f.name)
+
+    def test_fund_detail_data_json(self):
+        f = self._fund_with_record()
+        resp = self.client.get(f"/funds/{f.pk}/data/")
+        self.assertEqual(resp["Content-Type"], "application/json")

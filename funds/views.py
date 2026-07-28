@@ -2,6 +2,8 @@ from datetime import date as date_cls
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from .models import Fund, DailyRecord
@@ -68,7 +70,6 @@ def daily_entry(request):
             for frm in formset:
                 fund = Fund.objects.get(pk=frm.cleaned_data["fund"], user=request.user)
                 profit = frm.cleaned_data.get("profit")
-                # 非定投日且没填盈亏 → 不建记录
                 if profit is None and not fund.is_dca_day(d):
                     continue
                 invested = frm.cleaned_data.get("invested")
@@ -83,7 +84,6 @@ def daily_entry(request):
             _recompute_all(funds)
             return redirect("daily-entry")
 
-    # GET：预填投入（定投日填定投额，否则 0）
     initial = []
     for f in funds:
         rec = f.records.filter(date=d).first()
@@ -98,3 +98,40 @@ def daily_entry(request):
     pairs = list(zip(formset, funds))
     return render(request, "funds/daily_entry.html",
                   {"formset": formset, "pairs": pairs, "date": d})
+
+
+@login_required
+def dashboard(request):
+    funds = Fund.objects.filter(user=request.user)
+    total_value = Decimal("0")
+    total_invested = Decimal("0")
+    total_profit = Decimal("0")
+    for f in funds:
+        last = f.records.order_by("-date").first()
+        if last:
+            total_value += last.total
+        total_invested += f.records.aggregate(s=Sum("invested"))["s"] or Decimal("0")
+        total_profit += f.records.filter(has_trade=True).aggregate(s=Sum("profit"))["s"] or Decimal("0")
+    ratio = (total_profit / total_invested * 100) if total_invested else Decimal("0")
+    return render(request, "funds/dashboard.html", {
+        "funds": funds, "total_value": total_value,
+        "total_invested": total_invested, "total_profit": total_profit, "ratio": ratio,
+    })
+
+
+@login_required
+def fund_detail(request, pk):
+    fund = get_object_or_404(Fund, pk=pk, user=request.user)
+    return render(request, "funds/fund_detail.html", {"fund": fund})
+
+
+@login_required
+def fund_detail_data(request, pk):
+    """走势数据 JSON 端点（供 Chart.js fetch）。"""
+    fund = get_object_or_404(Fund, pk=pk, user=request.user)
+    recs = fund.records.order_by("date")
+    return JsonResponse({
+        "dates": [r.date.isoformat() for r in recs],
+        "totals": [str(r.total) for r in recs],
+        "profits": [str(r.profit or 0) for r in recs],
+    })

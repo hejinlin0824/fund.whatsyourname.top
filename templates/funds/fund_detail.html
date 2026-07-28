@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ fund.name }} · 走势{% endblock %}
+{% block content %}
+<a class="btn btn-link btn-sm p-0 mb-2" href="{% url 'dashboard' %}">← 返回</a>
+<h3 class="mb-1">{{ fund.name }}
+  <small class="text-muted">{{ fund.code }} · {{ fund.get_market_display }} · T+{{ fund.confirm_delay }} · {{ fund.get_invest_frequency_display }}{{ fund.invest_amount }}</small>
+</h3>
+<p class="text-muted small mb-3">起购日 {{ fund.start_date }} · 起点总额 {{ fund.start_total }}</p>
+
+<div class="btn-group btn-group-sm mb-3" role="group">
+  <button type="button" class="btn btn-outline-secondary active" id="btn-day" onclick="setView('day')">日</button>
+  <button type="button" class="btn btn-outline-secondary" id="btn-week" onclick="setView('week')">周</button>
+  <button type="button" class="btn btn-outline-secondary" id="btn-month" onclick="setView('month')">月</button>
+</div>
+<div style="height:380px"><canvas id="trendChart"></canvas></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+let allData = null, chart = null, view = 'day';
+function setView(v){ view = v; if(allData) render(); }
+
+function bucketKey(iso, by){
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m-1, d));
+  if(by === 'month') return `${y}-${String(m).padStart(2,'0')}`;
+  // ISO week
+  const tmp = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
+  const dayNum = (tmp.getUTCDay()+6)%7;
+  tmp.setUTCDate(tmp.getUTCDate()-dayNum+3);
+  const firstThu = new Date(Date.UTC(tmp.getUTCFullYear(),0,4));
+  const week = 1 + Math.round(((tmp-firstThu)/86400000-3+((firstThu.getUTCDay()+6)%7))/7);
+  return `${tmp.getUTCFullYear()}-W${String(week).padStart(2,'0')}`;
+}
+
+function aggregate(by){
+  if(by === 'day') return {labels: allData.dates, totals: allData.totals, profits: allData.profits};
+  const order = [], tot = {}, prof = {};
+  allData.dates.forEach((iso,i) => {
+    const k = bucketKey(iso, by);
+    if(!(k in tot)){ order.push(k); tot[k]=allData.totals[i]; prof[k]=0; }
+    else { tot[k]=allData.totals[i]; }              // 区期末取最后一个 total
+    prof[k] += parseFloat(allData.profits[i]||0);   // 区间盈亏求和
+  });
+  return {labels: order, totals: order.map(k=>tot[k]), profits: order.map(k=>prof[k].toFixed(2))};
+}
+
+function render(){
+  const g = aggregate(view);
+  const cfg = {
+    type:'line',
+    data:{ labels:g.labels, datasets:[
+      {label:'总额', data:g.totals, borderColor:'#0d6efd', backgroundColor:'rgba(13,110,253,.1)', yAxisID:'y', tension:0.1, fill:true},
+      {label:'当日盈亏', data:g.profits, borderColor:'#dc3545', yAxisID:'y1', tension:0.1},
+    ]},
+    options:{ maintainAspectRatio:false, scales:{
+      y:{position:'left'}, y1:{position:'right', grid:{drawOnChartArea:false}}
+    }}
+  };
+  if(chart) chart.destroy();
+  chart = new Chart(document.getElementById('trendChart'), cfg);
+}
+
+fetch("{% url 'fund-detail-data' fund.pk %}").then(r=>r.json()).then(d=>{
+  allData = d;
+  if(allData.dates.length === 0){
+    document.querySelector('div[style]').innerHTML = '<p class="text-muted">还没有录入数据。</p>';
+  } else { render(); }
+});
+</script>
+{% endblock %}
