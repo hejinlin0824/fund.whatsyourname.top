@@ -1,10 +1,20 @@
 {% extends "base.html" %}
-{% block title %}今日录入 · 基金看板{% endblock %}
+{% block title %}录入 · {{ date }} · 基金看板{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h3 class="mb-0">今日录入 · {{ date }}</h3>
+  <div>
+    {% if prev_date %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'daily-entry' %}?date={{ prev_date.isoformat }}">‹ 前一天</a>
+    {% endif %}
+    <span class="mx-2 h5 mb-0 align-middle">📅 {{ date }}</span>
+    {% if next_date %}
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'daily-entry' %}?date={{ next_date.isoformat }}">下一天 ›</a>
+    {% endif %}
+  </div>
   <a class="btn btn-outline-primary btn-sm" href="{% url 'fund-create' %}">+ 添加新基金</a>
 </div>
+
+{% if saved %}<div class="alert alert-success py-2">✅ {{ date }} 保存成功</div>{% endif %}
 
 <form method="post">
   {% csrf_token %}
@@ -28,12 +38,15 @@
     {% endfor %}
     </tbody>
   </table>
-  <div class="d-flex gap-2">
-    <button type="submit" name="action" value="save" class="btn btn-primary">💾 保存今日全部</button>
+  <div class="d-flex gap-2 mb-3">
+    <button type="submit" name="action" value="save" class="btn btn-primary">💾 保存</button>
     <button type="submit" name="action" value="no_trade" formnovalidate class="btn btn-outline-secondary">今日无交易</button>
   </div>
+  <div class="text-muted small">保存后会留在本日并提示成功，点上方「下一天」继续补录。</div>
   {% else %}
-  <p class="text-muted">还没有基金，先 <a href="{% url 'fund-create' %}">添加一只</a>。</p>
+  <p class="text-muted">没有在投的基金。先 <a href="{% url 'fund-create' %}">添加一只</a>。</p>
   {% endif %}
 </form>
+
+<p><a href="{% url 'calendar' %}">📅 回日历</a> | <a href="/">回首页</a></p>
 {% endblock %}

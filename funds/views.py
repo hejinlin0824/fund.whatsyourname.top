@@ -1,11 +1,12 @@
 import calendar as _cal
-from datetime import date as date_cls
+from datetime import date as date_cls, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 
 from .models import Fund, DailyRecord
 from .forms import FundForm, DailyEntryFormSet
@@ -20,6 +21,20 @@ def _today(request):
 def _recompute_all(funds):
     for f in funds:
         services.recompute_fund_totals(f)
+
+
+def _next_trading_day(d):
+    nxt = d + timedelta(days=1)
+    while nxt.weekday() >= 5:          # 跳过周末
+        nxt += timedelta(days=1)
+    return nxt
+
+
+def _prev_trading_day(d):
+    prv = d - timedelta(days=1)
+    while prv.weekday() >= 5:
+        prv -= timedelta(days=1)
+    return prv
 
 
 def _finalize_end_date(fund):
@@ -44,7 +59,7 @@ def fund_create(request):
         fund.save()
         form.save_m2m()
         _finalize_end_date(fund)
-        services.backfill_fund(fund)          # 从起购日补齐到今天
+        services.backfill_fund(fund)
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
@@ -56,16 +71,17 @@ def fund_edit(request, pk):
     if form.is_valid():
         form.save()
         _finalize_end_date(fund)
-        services.backfill_fund(fund)          # 起购日/终止日变了就补齐
+        services.backfill_fund(fund)
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
 
 @login_required
 def daily_entry(request):
-    """每日批量录入页：邮件 magic link 的落点，支持任意日期（补录历史）。"""
+    """每日批量录入页：支持任意日期补录。保存后留在当天并提示成功，附前后一天导航。"""
     d = _today(request)
     funds = list(Fund.objects.filter(user=request.user, is_active=True))
+    saved_back = reverse("daily-entry") + f"?date={d.isoformat()}&saved=1"
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -75,7 +91,7 @@ def daily_entry(request):
                     fund=f, date=d,
                     defaults={"has_trade": False, "invested": Decimal("0")})
             _recompute_all(funds)
-            return redirect("daily-entry")
+            return redirect(saved_back)
 
         formset = DailyEntryFormSet(request.POST)
         if formset.is_valid():
@@ -94,7 +110,7 @@ def daily_entry(request):
                     "has_trade": True,
                 })
             _recompute_all(funds)
-            return redirect("daily-entry")
+            return redirect(saved_back)
 
     initial = []
     for f in funds:
@@ -108,8 +124,17 @@ def daily_entry(request):
         })
     formset = DailyEntryFormSet(initial=initial)
     pairs = list(zip(formset, funds))
-    return render(request, "funds/daily_entry.html",
-                  {"formset": formset, "pairs": pairs, "date": d})
+
+    today = date_cls.today()
+    nxt = _next_trading_day(d)
+    prv = _prev_trading_day(d)
+    earliest = min((f.start_date for f in funds), default=d)
+    context = {
+        "formset": formset, "pairs": pairs, "date": d, "saved": request.GET.get("saved") == "1",
+        "prev_date": prv if prv >= earliest else None,
+        "next_date": nxt if nxt <= today else None,
+    }
+    return render(request, "funds/daily_entry.html", context)
 
 
 @login_required
@@ -125,10 +150,10 @@ def dashboard(request):
             mv = last_known.total
             invested_to_date = f.records.filter(date__lte=last_known.date)\
                 .aggregate(s=Sum("invested"))["s"] or Decimal("0")
-            cost = Decimal(f.start_total) + invested_to_date      # 成本 = 起购前已有 + 截止日累计投入
+            cost = Decimal(f.start_total) + invested_to_date
             total_value += mv
             total_invested += cost
-            total_profit += (mv - cost)                           # 盈亏 = 市值 - 成本，三者一致
+            total_profit += (mv - cost)
         fund_pairs.append((f, last_known))
     ratio = (total_profit / total_invested * 100) if total_invested else Decimal("0")
     return render(request, "funds/dashboard.html", {
@@ -139,7 +164,6 @@ def dashboard(request):
 
 @login_required
 def calendar_view(request):
-    """月历：标记每天状态（已录全/待补录/未建/未来），点格子跳到该日录入。"""
     today = date_cls.today()
     year = int(request.GET.get("year", today.year))
     month = int(request.GET.get("month", today.month))
@@ -164,7 +188,6 @@ def calendar_view(request):
             status = "empty"
         days.append({"date": dt, "status": status})
 
-    # 组成周行（前端无需取模换行）
     cells = [None] * first.weekday() + days
     while len(cells) % 7 != 0:
         cells.append(None)
@@ -194,7 +217,6 @@ def fund_detail(request, pk):
 
 @login_required
 def fund_detail_data(request, pk):
-    """走势数据 JSON（Chart.js）。total 为 None 时送 null（图表留空）。"""
     fund = get_object_or_404(Fund, pk=pk, user=request.user)
     recs = fund.records.order_by("date")
     return JsonResponse({
