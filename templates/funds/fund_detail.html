@@ -5,25 +5,31 @@
 <h3 class="mb-1">{{ fund.name }}
   <small class="text-muted">{{ fund.code }} · {{ fund.get_market_display }} · T+{{ fund.confirm_delay }} · {{ fund.get_invest_frequency_display }}{{ fund.invest_amount }}</small>
 </h3>
-<p class="text-muted small mb-3">起购日 {{ fund.start_date }} · 起点总额 {{ fund.start_total }}</p>
+<p class="text-muted small mb-3">起购日 {{ fund.start_date }} · 起购前已有持仓 {{ fund.start_total }}{% if fund.end_date %} · {% if fund.is_cleared %}清仓{% else %}停投{% endif %} {{ fund.end_date }}{% endif %}</p>
 
 <div class="btn-group btn-group-sm mb-3" role="group">
   <button type="button" class="btn btn-outline-secondary active" id="btn-day" onclick="setView('day')">日</button>
   <button type="button" class="btn btn-outline-secondary" id="btn-week" onclick="setView('week')">周</button>
   <button type="button" class="btn btn-outline-secondary" id="btn-month" onclick="setView('month')">月</button>
 </div>
-<div style="height:380px"><canvas id="trendChart"></canvas></div>
+<div class="btn-group btn-group-sm mb-3 ms-2" role="group">
+  <button type="button" class="btn btn-outline-secondary active" data-metric="total" onclick="setMetric('total','this.dataset.metric')">总额</button>
+  <button type="button" class="btn btn-outline-secondary" data-metric="profit" onclick="setMetric('profit', 'profit')">盈亏</button>
+  <button type="button" class="btn btn-outline-secondary" data-metric="invested" onclick="setMetric('invested','invested')">投入</button>
+  <button type="button" class="btn btn-outline-secondary" data-metric="all" onclick="setMetric('all','all')">全部</button>
+</div>
+<div style="height:400px"><canvas id="trendChart"></canvas></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-let allData = null, chart = null, view = 'day';
+let allData = null, chart = null, view = 'day', metric = 'total';
 function setView(v){ view = v; if(allData) render(); }
+function setMetric(m){ metric = m; if(allData) render(); }
 
 function bucketKey(iso, by){
   const [y,m,d] = iso.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m-1, d));
   if(by === 'month') return `${y}-${String(m).padStart(2,'0')}`;
-  // ISO week
   const tmp = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
   const dayNum = (tmp.getUTCDay()+6)%7;
   tmp.setUTCDate(tmp.getUTCDate()-dayNum+3);
@@ -33,31 +39,39 @@ function bucketKey(iso, by){
 }
 
 function aggregate(by){
-  if(by === 'day') return {labels: allData.dates, totals: allData.totals, profits: allData.profits};
-  const order = [], tot = {}, prof = {};
+  if(by === 'day')
+    return {labels: allData.dates, total: allData.totals, profit: allData.profits, invested: allData.invested};
+  const order = [], tot = {}, prof = {}, inv = {};
   allData.dates.forEach((iso,i) => {
     const k = bucketKey(iso, by);
-    if(!(k in tot)){ order.push(k); tot[k]=allData.totals[i]; prof[k]=0; }
-    else { tot[k]=allData.totals[i]; }              // 区期末取最后一个 total
-    prof[k] += parseFloat(allData.profits[i]||0);   // 区间盈亏求和
+    if(!(k in tot)){ order.push(k); tot[k]=allData.totals[i]; prof[k]=0; inv[k]=0; }
+    else { tot[k]=allData.totals[i]; }                  // 区期末取最后一个 total
+    prof[k] += parseFloat(allData.profits[i]||0);        // 盈亏求和
+    inv[k]  += parseFloat(allData.invested[i]||0);       // 投入求和
   });
-  return {labels: order, totals: order.map(k=>tot[k]), profits: order.map(k=>prof[k].toFixed(2))};
+  return {labels: order, total: order.map(k=>tot[k]), profit: order.map(k=>prof[k].toFixed(2)), invested: order.map(k=>inv[k].toFixed(2))};
 }
+
+const SERIES = {
+  total:    {label:'总额', color:'#0d6efd', fill:true},
+  profit:   {label:'当日盈亏', color:'#dc3545', fill:false},
+  invested: {label:'当日投入', color:'#198754', fill:false},
+};
 
 function render(){
   const g = aggregate(view);
-  const cfg = {
-    type:'line',
-    data:{ labels:g.labels, datasets:[
-      {label:'总额', data:g.totals, borderColor:'#0d6efd', backgroundColor:'rgba(13,110,253,.1)', yAxisID:'y', tension:0.1, fill:true},
-      {label:'当日盈亏', data:g.profits, borderColor:'#dc3545', yAxisID:'y1', tension:0.1},
-    ]},
-    options:{ maintainAspectRatio:false, scales:{
-      y:{position:'left'}, y1:{position:'right', grid:{drawOnChartArea:false}}
-    }}
-  };
+  const which = metric === 'all' ? ['total','profit','invested'] : [metric];
+  const datasets = which.map(k => ({
+    label: SERIES[k].label, data: g[k], borderColor: SERIES[k].color,
+    backgroundColor: SERIES[k].color + '22', yAxisID: 'y', tension: 0.1, fill: SERIES[k].fill,
+  }));
   if(chart) chart.destroy();
-  chart = new Chart(document.getElementById('trendChart'), cfg);
+  chart = new Chart(document.getElementById('trendChart'), {
+    type:'line',
+    data:{ labels:g.labels, datasets },
+    options:{ maintainAspectRatio:false,
+      scales:{ y:{position:'left'} } }
+  });
 }
 
 fetch("{% url 'fund-detail-data' fund.pk %}").then(r=>r.json()).then(d=>{

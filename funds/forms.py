@@ -13,7 +13,7 @@ class FundForm(forms.ModelForm):
         model = Fund
         fields = ["name", "code", "market", "confirm_delay", "invest_amount",
                   "invest_frequency", "invest_weekday", "start_date", "start_total",
-                  "fund_type", "risk_level", "currency", "tags", "is_active", "end_date"]
+                  "fund_type", "risk_level", "currency", "tags", "is_active", "end_date", "is_cleared"]
         labels = {
             "name": "基金名称",
             "code": "基金代码",
@@ -23,13 +23,14 @@ class FundForm(forms.ModelForm):
             "invest_frequency": "定投频率",
             "invest_weekday": "定投日",
             "start_date": "起购日",
-            "start_total": "起点总额",
+            "start_total": "起购前已有持仓",
             "fund_type": "基金类型",
             "risk_level": "风险等级",
             "currency": "币种",
             "tags": "标签",
             "is_active": "仍在定投",
-            "end_date": "终止日",
+            "end_date": "停投日",
+            "is_cleared": "已清仓",
         }
         help_texts = {
             "name": "你给这只基金起的名字，方便自己识别。",
@@ -40,13 +41,14 @@ class FundForm(forms.ModelForm):
             "invest_frequency": "每日 = 每个交易日扣款；每周 = 固定某一天扣款。",
             "invest_weekday": "只在「每周」时需要填。",
             "start_date": "你第一次买入、且份额已确认的那天。系统从这天开始记账。",
-            "start_total": "起购日【之前】已经持有的市值（含当时待确认）。如果是从第一笔买入当天开始记，填 0 或留空。",
+            "start_total": "起购日【之前】已经持有的市值（含当时待确认）。从第一笔买入当天开始记就填 0 或留空。",
             "fund_type": "用于后续按类型分组统计。",
             "risk_level": "R1 最低 ~ R5 最高。",
             "currency": "默认人民币。",
             "tags": "如：科技、消费、新能源。可自由添加，方便分类。",
-            "is_active": "关掉后不再出现在「今日录入」（已清仓可关）。",
-            "end_date": "停止定投/清仓的日期。取消勾选「仍在定投」时填，留空默认记为今天。",
+            "is_active": "勾选=仍在定投。取消后每日投入自动变 0，但仍持仓、仍要记每日盈亏。",
+            "end_date": "停投的日期。取消「仍在定投」时填，留空默认记为今天。",
+            "is_cleared": "勾选=已全部卖出、不再追踪每日盈亏（清仓，与「停投」不同）。",
         }
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "如：易方达蓝筹精选"}),
@@ -56,20 +58,22 @@ class FundForm(forms.ModelForm):
             "invest_amount": forms.NumberInput(attrs={"step": "0.01", "placeholder": "5"}),
             "invest_frequency": forms.Select(),
             "invest_weekday": forms.Select(choices=WEEKDAY_CHOICES),
-            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "start_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "start_total": forms.NumberInput(attrs={"step": "0.01", "placeholder": "0"}),
             "fund_type": forms.Select(),
             "risk_level": forms.Select(),
             "currency": forms.Select(),
             "tags": forms.SelectMultiple(attrs={"size": "6"}),
             "is_active": forms.CheckboxInput(),
-            "end_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "is_cleared": forms.CheckboxInput(),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # 选填字段
-        for name in ["code", "start_total", "invest_weekday", "fund_type", "risk_level", "currency", "tags", "end_date"]:
+        for name in ["code", "start_total", "invest_weekday", "fund_type", "risk_level",
+                     "currency", "tags", "end_date"]:
             self.fields[name].required = False
         # 统一套 Bootstrap 样式
         for name, field in self.fields.items():

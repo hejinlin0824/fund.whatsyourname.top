@@ -25,7 +25,7 @@ def _recompute_all(funds):
 
 def _next_trading_day(d):
     nxt = d + timedelta(days=1)
-    while nxt.weekday() >= 5:          # 跳过周末
+    while nxt.weekday() >= 5:
         nxt += timedelta(days=1)
     return nxt
 
@@ -38,8 +38,8 @@ def _prev_trading_day(d):
 
 
 def _finalize_end_date(fund):
-    """取消「仍在定投」且未填终止日 → 默认今天。"""
-    if not fund.is_active and not fund.end_date:
+    """停投或清仓且未填日期 → 默认今天。手动填的尊重用户。"""
+    if not fund.end_date and (not fund.is_active or fund.is_cleared):
         fund.end_date = date_cls.today()
         fund.save()
 
@@ -69,7 +69,8 @@ def fund_edit(request, pk):
     fund = get_object_or_404(Fund, pk=pk, user=request.user)
     form = FundForm(request.POST or None, instance=fund)
     if form.is_valid():
-        form.save()
+        fund = form.save()
+        form.save_m2m()
         _finalize_end_date(fund)
         services.backfill_fund(fund)
         return redirect("fund-list")
@@ -78,9 +79,9 @@ def fund_edit(request, pk):
 
 @login_required
 def daily_entry(request):
-    """每日批量录入页：支持任意日期补录。保存后留在当天并提示成功，附前后一天导航。"""
+    """每日批量录入页：未清仓的基金都显示（含已停投，其投入自动 0）。"""
     d = _today(request)
-    funds = list(Fund.objects.filter(user=request.user, is_active=True))
+    funds = list(Fund.objects.filter(user=request.user, is_cleared=False))
     saved_back = reverse("daily-entry") + f"?date={d.isoformat()}&saved=1"
 
     if request.method == "POST":
@@ -102,7 +103,7 @@ def daily_entry(request):
                     continue
                 invested = frm.cleaned_data.get("invested")
                 if invested is None:
-                    invested = fund.invest_amount if fund.is_dca_day(d) else Decimal("0")
+                    invested = fund.dca_invest_for(d)
                 DailyRecord.objects.update_or_create(fund=fund, date=d, defaults={
                     "profit": profit or Decimal("0"),
                     "profit_ratio": frm.cleaned_data.get("profit_ratio"),
@@ -115,7 +116,7 @@ def daily_entry(request):
     initial = []
     for f in funds:
         rec = f.records.filter(date=d).first()
-        invested = rec.invested if rec else (f.invest_amount if f.is_dca_day(d) else Decimal("0"))
+        invested = rec.invested if rec else f.dca_invest_for(d)
         initial.append({
             "fund": f.id,
             "profit": rec.profit if (rec and rec.has_trade and rec.profit is not None) else "",
@@ -184,11 +185,11 @@ def calendar_view(request):
         elif dt in by_date:
             rows = by_date[dt]
             if any(r.has_trade and r.profit is None for r in rows):
-                status = "pending"     # 交易日但盈亏未补
+                status = "pending"
             elif any(r.has_trade for r in rows):
-                status = "filled"      # 交易日已填
+                status = "filled"
             else:
-                status = "rest"        # 全是无交易（周末/标记休息）
+                status = "rest"
         else:
             status = "empty"
         days.append({"date": dt, "status": status})
@@ -228,4 +229,5 @@ def fund_detail_data(request, pk):
         "dates": [r.date.isoformat() for r in recs],
         "totals": [None if r.total is None else float(r.total) for r in recs],
         "profits": [None if r.profit is None else float(r.profit) for r in recs],
+        "invested": [float(r.invested) for r in recs],
     })

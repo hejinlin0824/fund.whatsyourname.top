@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 from django.db import models
 from accounts.models import User
 
@@ -26,8 +27,9 @@ class Fund(models.Model):
     fund_type = models.CharField(max_length=8, choices=TYPE_CHOICES, default="INDEX")
     risk_level = models.PositiveSmallIntegerField(choices=RISK_CHOICES, default=3)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="CNY")
-    is_active = models.BooleanField(default=True)
-    end_date = models.DateField(null=True, blank=True)   # 终止定投/清仓日（取消「仍在定投」时设）
+    is_active = models.BooleanField(default=True)                 # 仍在定投
+    end_date = models.DateField(null=True, blank=True)           # 停投日（取消定投时设）
+    is_cleared = models.BooleanField(default=False)              # 已清仓（全部卖出，不再追踪）
     tags = models.ManyToManyField("Tag", blank=True, related_name="funds")
 
     class Meta:
@@ -43,6 +45,21 @@ class Fund(models.Model):
         if self.invest_frequency == "DAILY":
             return True
         return d.weekday() == (self.invest_weekday or 0)
+
+    def dca_invest_for(self, d: date) -> Decimal:
+        """该日的定投扣款金额。
+        - 清仓 → 0
+        - 非定投日 → 0
+        - 仍在定投 → invest_amount
+        - 已停投：end_date 及之前仍按 invest_amount，之后 → 0（仍持仓，只记盈亏）
+        """
+        if self.is_cleared or not self.is_dca_day(d):
+            return Decimal("0")
+        if self.is_active:
+            return self.invest_amount
+        if self.end_date and d <= self.end_date:
+            return self.invest_amount
+        return Decimal("0")
 
     def pending_label(self) -> str:
         """仅用于首日显示示例；运行时待确认由 services 计算。"""

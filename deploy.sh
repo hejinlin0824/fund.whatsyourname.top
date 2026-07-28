@@ -3,10 +3,13 @@
 # 用法：ssh 到服务器后 `bash deploy.sh`，或本地 `ssh ... 'cd ... && bash deploy.sh'`
 cd ~/home/claude_PJ/Jijin_Kanban || { echo "project dir not found"; exit 1; }
 
-echo "=== [1/5] migrate ==="
+echo "=== [1/6] makemigrations ==="
+venv/bin/python manage.py makemigrations --noinput 2>&1 | tail -3
+
+echo "=== [2/6] migrate ==="
 venv/bin/python manage.py migrate --noinput 2>&1 | tail -3
 
-echo "=== [2/5] test (full suite) ==="
+echo "=== [3/6] test (full suite) ==="
 venv/bin/python manage.py test 2>&1 | tee /tmp/jk_test.log | tail -6
 TEST_RC=${PIPESTATUS[0]}
 if [ "$TEST_RC" != "0" ]; then

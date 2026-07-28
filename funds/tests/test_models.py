@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from django.test import TestCase
 from accounts.models import User
 from funds.models import Fund, Tag, DailyRecord
@@ -28,6 +29,25 @@ class FundModelTest(TestCase):
             start_date=date(2026, 6, 1), start_total=0)
         self.assertTrue(f.is_dca_day(date(2026, 6, 3)))   # 周三
         self.assertFalse(f.is_dca_day(date(2026, 6, 4)))  # 周四
+
+    def test_dca_invest_active(self):
+        f = Fund.objects.create(user=self.user, name="A", market="CN", confirm_delay=1,
+            invest_amount=5, invest_frequency="DAILY", start_date=date(2026, 6, 1), start_total=0)
+        self.assertEqual(f.dca_invest_for(date(2026, 6, 3)), Decimal("5"))   # 工作日
+        self.assertEqual(f.dca_invest_for(date(2026, 6, 6)), Decimal("0"))   # 周末
+
+    def test_dca_invest_stopped_after_end_date(self):
+        f = Fund.objects.create(user=self.user, name="A", market="CN", confirm_delay=1,
+            invest_amount=5, invest_frequency="DAILY", start_date=date(2026, 6, 1), start_total=0,
+            is_active=False, end_date=date(2026, 6, 5))
+        self.assertEqual(f.dca_invest_for(date(2026, 6, 3)), Decimal("5"))   # 停投前
+        self.assertEqual(f.dca_invest_for(date(2026, 6, 10)), Decimal("0"))  # 停投后 → 0
+
+    def test_dca_invest_cleared_is_zero(self):
+        f = Fund.objects.create(user=self.user, name="A", market="CN", confirm_delay=1,
+            invest_amount=5, invest_frequency="DAILY", start_date=date(2026, 6, 1), start_total=0,
+            is_cleared=True)
+        self.assertEqual(f.dca_invest_for(date(2026, 6, 3)), Decimal("0"))   # 清仓 → 0
 
 
 class DailyRecordTest(FundModelTest):

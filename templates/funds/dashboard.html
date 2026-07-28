@@ -3,9 +3,9 @@
 {% block content %}
 <h3 class="mb-3">组合总览</h3>
 <div class="row text-center mb-4 g-3">
-  <div class="col-md-3"><div class="card text-bg-primary p-3"><div class="small">总市值</div><div class="h4 mb-0">¥{{ total_value }}</div></div></div>
-  <div class="col-md-3"><div class="card text-bg-secondary p-3"><div class="small">累计投入</div><div class="h4 mb-0">¥{{ total_invested }}</div></div></div>
-  <div class="col-md-3"><div class="card {% if total_profit >= 0 %}text-bg-success{% else %}text-bg-danger{% endif %} p-3"><div class="small">累计盈亏</div><div class="h4 mb-0">{{ total_profit }}</div></div></div>
+  <div class="col-md-3"><div class="card text-bg-primary p-3"><div class="small">总市值</div><div class="h4 mb-0">¥{{ total_value|floatformat:2 }}</div></div></div>
+  <div class="col-md-3"><div class="card text-bg-secondary p-3"><div class="small">累计投入</div><div class="h4 mb-0">¥{{ total_invested|floatformat:2 }}</div></div></div>
+  <div class="col-md-3"><div class="card {% if total_profit >= 0 %}text-bg-success{% else %}text-bg-danger{% endif %} p-3"><div class="small">累计盈亏</div><div class="h4 mb-0">{{ total_profit|floatformat:2 }}</div></div></div>
   <div class="col-md-3"><div class="card text-bg-info p-3"><div class="small">收益率</div><div class="h4 mb-0">{{ ratio|floatformat:2 }}%</div></div></div>
 </div>
 
@@ -21,11 +21,11 @@
   <tbody>
   {% for f, last in fund_pairs %}
     <tr>
-      <td>{{ f.name }}{% if f.code %} <small class="text-muted">{{ f.code }}</small>{% endif %}{% if not f.is_active %} <span class="badge bg-secondary">已停</span>{% endif %}</td>
+      <td>{{ f.name }}{% if f.code %} <small class="text-muted">{{ f.code }}</small>{% endif %}{% if f.is_cleared %} <span class="badge bg-dark">已清仓</span>{% elif not f.is_active %} <span class="badge bg-secondary">已停投</span>{% endif %}</td>
       <td>{{ f.get_market_display }}</td>
-      <td>{% if last %}{{ last.total }}（待确认 {{ last.pending }}）<br><small class="text-muted">截至 {{ last.date }}</small>{% else %}<span class="text-warning">待补录</span>{% endif %}</td>
-      <td>{% if last %}{{ last.pending }}{% else %}—{% endif %}</td>
-      <td>{{ f.start_date }}{% if f.end_date %}<br><small class="text-muted">至 {{ f.end_date }}</small>{% endif %}</td>
+      <td>{% if last %}{{ last.total|floatformat:2 }}（待确认 {{ last.pending|floatformat:2 }}）<br><small class="text-muted">截至 {{ last.date }}</small>{% else %}<span class="text-warning">待补录</span>{% endif %}</td>
+      <td>{% if last %}{{ last.pending|floatformat:2 }}{% else %}—{% endif %}</td>
+      <td>{{ f.start_date }}{% if f.end_date %}<br><small class="text-muted">{% if f.is_cleared %}清仓{% else %}停投{% endif %} {{ f.end_date }}</small>{% endif %}</td>
       <td><a class="btn btn-outline-primary btn-sm" href="{% url 'fund-detail' f.pk %}">走势 →</a></td>
     </tr>
   {% empty %}
