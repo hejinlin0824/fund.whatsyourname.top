@@ -1,95 +1,53 @@
 {% extends "base.html" %}
-{% block title %}组合分析 · 基金看板{% endblock %}
+{% block title %}组合分析 · Whatsyour{% endblock %}
 {% block content %}
-<h3 class="mb-3">组合分析</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="section-title mb-0">组合分析</h4>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'dashboard' %}">← 返回首页</a>
+</div>
 
-<div class="row g-4">
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">总市值</div><div class="value">¥{{ mv|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">累计投入</div><div class="value">¥{{ cost|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">累计盈亏</div><div class="value {% if profit >= 0 %}pos{% else %}neg{% endif %}">{{ profit|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card card-pad stat"><div class="label">收益率</div><div class="value {% if roi >= 0 %}pos{% else %}neg{% endif %}">{{ roi|floatformat:2 }}%</div></div></div>
+</div>
+
+<div class="row g-3">
   <div class="col-12">
-    <div class="card p-3">
-      <h5 class="mb-2">组合总市值走势</h5>
-      <div style="height:320px"><canvas id="valueChart"></canvas></div>
-    </div>
+    <div class="card"><div class="card-pad">
+      <h6 class="section-title mb-2">组合总市值走势</h6>
+      <div style="height:300px"><canvas id="valueChart"></canvas></div>
+    </div></div>
   </div>
-
-  <div class="col-12">
-    <div class="card p-3">
-      <h5 class="mb-2">每日总盈亏（红=正 / 绿=负）</h5>
-      <div style="max-height:460px;overflow:auto;border:1px solid #dee2e6;border-radius:.375rem;padding:.5rem">
-        <div id="barWrap" style="height:600px"><canvas id="profitBar"></canvas></div>
+  <div class="col-12 col-lg-7">
+    <div class="card h-100"><div class="card-pad">
+      <h6 class="section-title mb-2">每日总盈亏 <span class="muted" style="font-size:.75rem;font-weight:400">红=盈利 · 绿=亏损</span></h6>
+      <div style="max-height:420px;overflow:auto;border-radius:.5rem">
+        <div id="barWrap" style="height:560px"><canvas id="profitBar"></canvas></div>
       </div>
-    </div>
+    </div></div>
   </div>
-
-  <div class="col-12 col-md-6">
-    <div class="card p-3 h-100">
-      <h5 class="mb-2">当前持仓占比</h5>
-      <div style="height:320px"><canvas id="allocChart"></canvas></div>
-    </div>
+  <div class="col-12 col-lg-5">
+    <div class="card h-100"><div class="card-pad">
+      <h6 class="section-title mb-2">当前持仓占比</h6>
+      <div style="height:420px"><canvas id="allocChart"></canvas></div>
+    </div></div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script>
-let barItems = [];
-const labelPlugin = {
-  id: 'barLabels',
-  afterDatasetsDraw(c){
-    const ctx = c.ctx, meta = c.getDatasetMeta(0);
-    meta.data.forEach((bar,i) => {
-      const v = barItems[i];
-      ctx.save();
-      ctx.fillStyle = v > 0 ? '#dc3545' : '#198754';
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText((v>0?'+':'') + v.toFixed(2), bar.x + 4, bar.y);
-      ctx.restore();
-    });
-  }
-};
-
+let barItems=[];
+const lp={id:'bl',afterDatasetsDraw(c){const ctx=c.ctx,m=c.getDatasetMeta(0);m.data.forEach((b,i)=>{const v=barItems[i];ctx.fillStyle=v>0?'#dc2626':'#059669';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText((v>0?'+':'')+v.toFixed(2),b.x+4,b.y);});}};
 fetch("{% url 'portfolio-data' %}").then(r=>r.json()).then(d=>{
-  // 1. 总市值走势
-  new Chart(document.getElementById('valueChart'), {
-    type:'line',
-    data:{ labels:d.dates, datasets:[{
-      label:'组合总市值', data:d.value, borderColor:'#0d6efd',
-      backgroundColor:'rgba(13,110,253,.1)', fill:true, tension:0.1
-    }]},
-    options:{ maintainAspectRatio:false, scales:{ y:{ beginAtZero:false } } }
-  });
-
-  // 2. 每日总盈亏（横向，红/绿，按最大绝对值等比）
-  barItems = d.profit.filter(v => v !== 0);
-  const barDates = d.dates.filter((_,i) => d.profit[i] !== 0);
-  const wrap = document.getElementById('barWrap');
-  wrap.style.height = Math.max(200, barItems.length * 22) + 'px';
-  new Chart(document.getElementById('profitBar'), {
-    type:'bar',
-    data:{ labels:barDates, datasets:[{
-      data: barItems.map(v => Math.abs(v)),
-      backgroundColor: barItems.map(v => v > 0 ? '#dc3545' : '#198754'),
-      borderRadius: 3, maxBarThickness: 14,
-    }]},
-    options:{
-      indexAxis:'y', maintainAspectRatio:false, responsive:true,
-      plugins:{ legend:{display:false} },
-      scales:{ x:{ beginAtZero:true }, y:{ ticks:{ font:{size:10} } } }
-    },
-    plugins:[labelPlugin]
-  });
-
-  // 3. 占比圆盘
-  const alloc = d.alloc;
-  const palette = ['#0d6efd','#dc3545','#198754','#ffc107','#6f42c1','#0dcaf0','#fd7e14','#d63384'];
-  new Chart(document.getElementById('allocChart'), {
-    type:'doughnut',
-    data:{ labels: alloc.map(a=>a.name), datasets:[{
-      data: alloc.map(a=>a.value),
-      backgroundColor: alloc.map((_,i)=>palette[i % palette.length]),
-    }]},
-    options:{ maintainAspectRatio:false, plugins:{ legend:{ position:'right' } },
-      tooltip:{ callbacks:{ label: ctx => ctx.label + ': ' + ctx.parsed.toFixed(2) + ' 元' } } }
-  });
+  new Chart(document.getElementById('valueChart'),{type:'line',data:{labels:d.dates,datasets:[{label:'组合总市值',data:d.value,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.12)',fill:true,tension:.1}]},options:{maintainAspectRatio:false}});
+  barItems=d.profit.filter(v=>v!==0);
+  const dates=d.dates.filter((_,i)=>d.profit[i]!==0);
+  const w=document.getElementById('barWrap');w.style.height=Math.max(200,barItems.length*22)+'px';
+  new Chart(document.getElementById('profitBar'),{type:'bar',data:{labels:dates,datasets:[{data:barItems.map(v=>Math.abs(v)),backgroundColor:barItems.map(v=>v>0?'#dc2626':'#059669'),borderRadius:3,maxBarThickness:14}]},options:{indexAxis:'y',maintainAspectRatio:false,responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}},plugins:[lp]});
+  const A=d.alloc,pal=['#6366f1','#dc2626','#059669','#f59e0b','#8b5cf6','#06b6d4','#f97316','#db2777'];
+  new Chart(document.getElementById('allocChart'),{type:'doughnut',data:{labels:A.map(a=>a.name),datasets:[{data:A.map(a=>a.value),backgroundColor:A.map((_,i)=>pal[i%pal.length])}]},options:{maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.toFixed(2)+' 元'}}}}});
 });
 </script>
 {% endblock %}

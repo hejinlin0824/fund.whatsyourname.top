@@ -2,39 +2,39 @@
 {% block title %}日历 · 基金看板{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <a class="btn btn-link btn-sm p-0" href="?year={{ prev_ym.0 }}&month={{ prev_ym.1 }}">‹ 上月</a>
-  <h3 class="mb-0">{{ month_label }}</h3>
-  <a class="btn btn-link btn-sm p-0" href="?year={{ next_ym.0 }}&month={{ next_ym.1 }}">下月 ›</a>
+  <a class="btn btn-outline-secondary btn-sm" href="?year={{ prev_ym.0 }}&month={{ prev_ym.1 }}">‹ 上月</a>
+  <h4 class="section-title mb-0">{{ month_label }}</h4>
+  <a class="btn btn-outline-secondary btn-sm" href="?year={{ next_ym.0 }}&month={{ next_ym.1 }}">下月 ›</a>
 </div>
 
-<div class="mb-3 small text-muted">
-  <span class="badge bg-success">已录全</span>
-  <span class="badge bg-warning text-dark">待补录</span>
-  <span class="badge bg-secondary">无交易/休</span>
-  <span class="badge bg-light text-dark border">未建</span>
-  · 点任意日期跳到该日录入
+<div class="mb-3 d-flex gap-2 flex-wrap" style="font-size:.8rem;">
+  <span class="badge rounded-pill" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0">已录全</span>
+  <span class="badge rounded-pill" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a">待补录</span>
+  <span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0">无交易</span>
+  <span class="badge rounded-pill" style="background:#fff;color:#94a3b8;border:1px solid #eef0f4">未建</span>
+  <span class="ms-2 muted align-self-center">红字=当日盈利 · 绿字=当日亏损 · 点格子跳转录入</span>
 </div>
 
-<table class="table table-bordered text-center align-middle" style="table-layout:fixed">
+<table class="table table-bordered cal align-middle text-center">
   <thead class="table-light">
     <tr>{% for w in weekdays %}<th>{{ w }}</th>{% endfor %}</tr>
   </thead>
   <tbody>
   {% for week in weeks %}
-    <tr style="height:64px">
+    <tr>
     {% for cell in week %}
       <td>
         {% if cell %}
           {% if cell.status == 'future' %}
-            <span class="text-muted">{{ cell.date.day }}</span>
-          {% elif cell.status == 'filled' %}
-            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-success p-2">{{ cell.date.day }}</a>
-          {% elif cell.status == 'pending' %}
-            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-warning text-dark p-2">{{ cell.date.day }}</a>
-          {% elif cell.status == 'rest' %}
-            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-secondary p-2">{{ cell.date.day }}</a>
+            <div class="cal-future"><span class="d">{{ cell.date.day }}</span></div>
           {% else %}
-            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}" class="badge bg-light text-dark border p-2">{{ cell.date.day }}</a>
+            <a href="{% url 'daily-entry' %}?date={{ cell.date.isoformat }}"
+               class="cal-{{ cell.status }} {% if cell.date == today %}today{% endif %}">
+              <span class="d">{{ cell.date.day }}</span>
+              {% if cell.profit %}
+                <span class="p {{ cell.pcls }}">{{ cell.profit|floatformat:2 }}</span>
+              {% endif %}
+            </a>
           {% endif %}
         {% endif %}
       </td>

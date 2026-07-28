@@ -43,10 +43,27 @@ def _finalize_end_date(fund):
         fund.save()
 
 
+def _fund_summary(fund):
+    """单基金汇总：最新市值、成本、盈亏、收益率（截止最新已知总额那天）。"""
+    last = fund.records.exclude(total__isnull=True).order_by("-date").first()
+    if last:
+        recs = fund.records.filter(date__lte=last.date)
+        inv = sum((fund.effective_invested(r.invested) for r in recs), Decimal("0"))
+        cost = Decimal(fund.start_total) + inv
+        mv = last.total
+    else:
+        mv, cost = Decimal("0"), Decimal(fund.start_total)
+    profit = mv - cost
+    roi = (profit / cost * 100) if cost else Decimal("0")
+    return {"mv": mv, "cost": cost, "profit": profit, "roi": roi,
+            "last_date": last.date if last else None}
+
+
 @login_required
 def fund_list(request):
     funds = Fund.objects.filter(user=request.user)
-    return render(request, "funds/fund_list.html", {"funds": funds})
+    rows = [(f, _fund_summary(f)) for f in funds]
+    return render(request, "funds/fund_list.html", {"rows": rows})
 
 
 @login_required
@@ -72,7 +89,7 @@ def fund_edit(request, pk):
         fund = form.save()
         _finalize_end_date(fund)
         services.backfill_fund(fund)
-        services.recompute_fund_totals(fund)   # 费率/起购等改动强制重算
+        services.recompute_fund_totals(fund)
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
@@ -145,16 +162,11 @@ def dashboard(request):
     total_profit = Decimal("0")
     fund_pairs = []
     for f in funds:
-        last_known = f.records.exclude(total__isnull=True).order_by("-date").first()
-        if last_known:
-            mv = last_known.total
-            recs_to_date = f.records.filter(date__lte=last_known.date)
-            eff_sum = sum((f.effective_invested(r.invested) for r in recs_to_date), Decimal("0"))
-            cost = Decimal(f.start_total) + eff_sum
-            total_value += mv
-            total_invested += cost
-            total_profit += (mv - cost)
-        fund_pairs.append((f, last_known))
+        s = _fund_summary(f)
+        total_value += s["mv"]
+        total_invested += s["cost"]
+        total_profit += s["profit"]
+        fund_pairs.append((f, s))
     ratio = (total_profit / total_invested * 100) if total_invested else Decimal("0")
     return render(request, "funds/dashboard.html", {
         "fund_pairs": fund_pairs, "total_value": total_value,
@@ -179,10 +191,11 @@ def calendar_view(request):
     days = []
     for dnum in range(1, last_day + 1):
         dt = date_cls(year, month, dnum)
+        rows = by_date.get(dt, [])
+        day_profit = sum((Decimal(r.profit) for r in rows if r.profit is not None), Decimal("0"))
         if dt > today:
             status = "future"
-        elif dt in by_date:
-            rows = by_date[dt]
+        elif rows:
             if any(r.has_trade and r.profit is None for r in rows):
                 status = "pending"
             elif any(r.has_trade for r in rows):
@@ -191,7 +204,8 @@ def calendar_view(request):
                 status = "rest"
         else:
             status = "empty"
-        days.append({"date": dt, "status": status})
+        pcls = "up" if day_profit > 0 else ("down" if day_profit < 0 else "")
+        days.append({"date": dt, "status": status, "profit": day_profit, "pcls": pcls})
 
     cells = [None] * first.weekday() + days
     while len(cells) % 7 != 0:
@@ -217,7 +231,7 @@ def calendar_view(request):
 @login_required
 def fund_detail(request, pk):
     fund = get_object_or_404(Fund, pk=pk, user=request.user)
-    return render(request, "funds/fund_detail.html", {"fund": fund})
+    return render(request, "funds/fund_detail.html", {"fund": fund, "s": _fund_summary(fund)})
 
 
 @login_required
@@ -234,12 +248,19 @@ def fund_detail_data(request, pk):
 
 @login_required
 def portfolio(request):
-    return render(request, "funds/portfolio.html")
+    funds = Fund.objects.filter(user=request.user)
+    mv = cost = Decimal("0")
+    for f in funds:
+        s = _fund_summary(f)
+        mv += s["mv"]
+        cost += s["cost"]
+    profit = mv - cost
+    roi = (profit / cost * 100) if cost else Decimal("0")
+    return render(request, "funds/portfolio.html", {"mv": mv, "cost": cost, "profit": profit, "roi": roi})
 
 
 @login_required
 def portfolio_data(request):
-    """组合级数据：每日总市值（各基金 carry-forward 之和）、每日总盈亏、当前各基金占比。"""
     funds = list(Fund.objects.filter(user=request.user).order_by("id"))
     fund_recs = {f.id: dict(f.records.exclude(total__isnull=True)
                             .order_by("date").values_list("date", "total")) for f in funds}
