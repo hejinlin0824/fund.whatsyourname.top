@@ -20,6 +20,19 @@ class FundCrudTest(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(self.u.funds.count(), 1)
 
+    def test_edit_fund_via_post(self):
+        f = Fund.objects.create(user=self.u, name="old", market="CN", confirm_delay=1,
+            invest_amount=5, invest_frequency="DAILY", start_date="2026-06-01", start_total=10)
+        resp = self.client.post(f"/funds/{f.pk}/edit/", {
+            "name": "newname", "code": "", "market": "CN", "confirm_delay": 1,
+            "invest_amount": "5", "invest_frequency": "DAILY", "invest_weekday": 0,
+            "start_date": "2026-06-01", "start_total": "10",
+            "fund_type": "INDEX", "risk_level": 3, "currency": "CNY",
+        })
+        self.assertEqual(resp.status_code, 302)
+        f.refresh_from_db()
+        self.assertEqual(f.name, "newname")
+
     def test_list_shows_own_funds_only(self):
         Fund.objects.create(user=self.u, name="mine", market="CN", confirm_delay=1,
             invest_amount=5, invest_frequency="DAILY", start_date="2026-06-01", start_total=10)

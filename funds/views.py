@@ -70,7 +70,6 @@ def fund_edit(request, pk):
     form = FundForm(request.POST or None, instance=fund)
     if form.is_valid():
         fund = form.save()
-        form.save_m2m()
         _finalize_end_date(fund)
         services.backfill_fund(fund)
         return redirect("fund-list")
