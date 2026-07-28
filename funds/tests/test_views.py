@@ -54,6 +54,19 @@ class FundCrudTest(TestCase):
         self.assertContains(resp, "ZZstopped")          # 停投仍持仓 → 显示
         self.assertNotContains(resp, "ZZcleared")       # 清仓 → 隐藏
 
+    def test_daily_entry_only_shows_funds_existing_on_that_date(self):
+        # A 6/1 起，B 6/15 起
+        Fund.objects.create(user=self.u, name="ZZA", market="CN", confirm_delay=1,
+            invest_amount=5, invest_frequency="DAILY", start_date="2026-06-01", start_total=0)
+        Fund.objects.create(user=self.u, name="ZZB", market="CN", confirm_delay=1,
+            invest_amount=5, invest_frequency="DAILY", start_date="2026-06-15", start_total=0)
+        before = self.client.get("/funds/daily/?date=2026-06-10")
+        self.assertContains(before, "ZZA")
+        self.assertNotContains(before, "ZZB")           # B 6/15 才开始，6/10 不该出现
+        after = self.client.get("/funds/daily/?date=2026-06-20")
+        self.assertContains(after, "ZZA")
+        self.assertContains(after, "ZZB")               # 6/20 两个都在
+
 
 class DailyEntryTest(FundCrudTest):
     """继承 FundCrudTest 的 login setUp，但不在 setUp 建基金（否则污染继承的 CRUD 断言）。"""

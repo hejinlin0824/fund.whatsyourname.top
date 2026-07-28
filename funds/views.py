@@ -80,7 +80,7 @@ def fund_edit(request, pk):
 def daily_entry(request):
     """每日批量录入页：未清仓的基金都显示（含已停投，其投入自动 0）。"""
     d = _today(request)
-    funds = list(Fund.objects.filter(user=request.user, is_cleared=False))
+    funds = list(Fund.objects.filter(user=request.user, is_cleared=False, start_date__lte=d))
     saved_back = reverse("daily-entry") + f"?date={d.isoformat()}&saved=1"
 
     if request.method == "POST":
