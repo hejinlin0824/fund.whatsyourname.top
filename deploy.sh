@@ -17,16 +17,16 @@ if [ "$TEST_RC" != "0" ]; then
   exit 1
 fi
 
-echo "=== [3/5] collectstatic ==="
+echo "=== [4/6] collectstatic ==="
 venv/bin/python manage.py collectstatic --noinput 2>&1 | tail -1
 
-echo "=== [4/5] restart runserver :8188 (kill old by port-PID, setsid detach) ==="
+echo "=== [5/6] restart runserver :8188 (kill old by port-PID, setsid detach) ==="
 PID=$(ss -ltnp 2>/dev/null | grep ":8188" | grep -oP 'pid=\K[0-9]+' | head -1)
 if [ -n "$PID" ]; then echo "killing old pid $PID"; kill -9 "$PID" 2>/dev/null; sleep 2; fi
 setsid bash -c 'exec venv/bin/python manage.py runserver 0.0.0.0:8188 --noreload </dev/null >>server.log 2>&1' &
 sleep 5
 
-echo "=== [5/5] healthcheck ==="
+echo "=== [6/6] healthcheck ==="
 ss -ltnp 2>/dev/null | grep ":8188" | head -1 || echo "NOT LISTENING"
 curl -s -o /dev/null -w "localhost  HTTP %{http_code}\n" http://127.0.0.1:8188/ || true
 echo "=== deploy done ==="
