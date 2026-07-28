@@ -1,6 +1,8 @@
+from datetime import date
+from decimal import Decimal
 from django.test import TestCase
 from accounts.models import User
-from funds.models import Fund
+from funds.models import Fund, DailyRecord
 
 
 class FundCrudTest(TestCase):
@@ -27,3 +29,35 @@ class FundCrudTest(TestCase):
         resp = self.client.get("/funds/")
         self.assertContains(resp, "mine")
         self.assertNotContains(resp, "ZZZnotmine")
+
+
+class DailyEntryTest(FundCrudTest):
+    """继承 FundCrudTest 的 login setUp，但不在 setUp 建基金（否则污染继承的 CRUD 断言）。"""
+
+    def _make_fund(self):
+        fund = Fund.objects.create(
+            user=self.u, name="A", market="CN", confirm_delay=1,
+            invest_amount=Decimal("5"), invest_frequency="DAILY",
+            start_date=date(2026, 6, 1), start_total=Decimal("10"))
+        DailyRecord.objects.create(fund=fund, date=date(2026, 6, 1), invested=Decimal("5"))
+        return fund
+
+    def test_post_saves_profit_and_recomputes(self):
+        fund = self._make_fund()
+        resp = self.client.post("/funds/daily/?date=2026-06-02", {
+            "form-TOTAL_FORMS": "1", "form-INITIAL_FORMS": "0",
+            "form-0-fund": fund.id, "form-0-profit": "0.84",
+            "form-0-invested": "5", "form-0-profit_ratio": "",
+            "action": "save",
+        })
+        self.assertEqual(resp.status_code, 302)
+        r = DailyRecord.objects.get(fund=fund, date=date(2026, 6, 2))
+        self.assertEqual(r.total, Decimal("15.84"))
+        self.assertEqual(r.pending, Decimal("5"))
+
+    def test_mark_no_trade(self):
+        fund = self._make_fund()
+        resp = self.client.post("/funds/daily/?date=2026-06-07", {"action": "no_trade"})
+        self.assertEqual(resp.status_code, 302)
+        r = DailyRecord.objects.get(fund=fund, date=date(2026, 6, 7))
+        self.assertFalse(r.has_trade)

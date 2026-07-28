@@ -48,5 +48,4 @@ def magic_login(request, token):
     except User.DoesNotExist:
         raise Http404
     login(request, user)
-    # Task 9 建好 daily-entry 后改为 redirect("daily-entry")
-    return redirect(settings.LOGIN_REDIRECT_URL)
+    return redirect("daily-entry")
