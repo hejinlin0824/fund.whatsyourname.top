@@ -7,10 +7,10 @@
 </div>
 
 <div class="row g-2 g-md-3 mb-4">
-  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">总市值</div><div class="value">¥{{ mv|floatformat:2 }}</div></div></div>
-  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">累计投入</div><div class="value">¥{{ cost|floatformat:2 }}</div></div></div>
-  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">累计盈亏</div><div class="value {% if profit >= 0 %}pos{% else %}neg{% endif %}">{{ profit|floatformat:2 }}</div></div></div>
-  <div class="col-6 col-lg-3"><div class="panel stat h-100"><div class="label">收益率</div><div class="value {% if roi >= 0 %}pos{% else %}neg{% endif %}">{{ roi|floatformat:2 }}%</div></div></div>
+  <div class="col-12 col-sm-6"><div class="panel stat h-100"><div class="label">总市值</div><div class="value">¥{{ mv|floatformat:2 }}</div></div></div>
+  <div class="col-12 col-sm-6"><div class="panel stat h-100"><div class="label">累计投入</div><div class="value">¥{{ cost|floatformat:2 }}</div></div></div>
+  <div class="col-12 col-sm-6"><div class="panel stat h-100"><div class="label">累计盈亏</div><div class="value {% if profit >= 0 %}pos{% else %}neg{% endif %}">{{ profit|floatformat:2 }}</div></div></div>
+  <div class="col-12 col-sm-6"><div class="panel stat h-100"><div class="label">收益率</div><div class="value {% if roi >= 0 %}pos{% else %}neg{% endif %}">{{ roi|floatformat:2 }}%</div></div></div>
 </div>
 
 <div class="row g-3">
