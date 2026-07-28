@@ -41,7 +41,7 @@ def recompute_fund_totals(fund) -> int:
             r.total = None
             known = False
         else:
-            r.total = (running + Decimal(r.profit) + Decimal(r.invested)) if known else None
+            r.total = (running + Decimal(r.profit) + fund.effective_invested(r.invested)) if known else None
         if r.total is not None:
             running = r.total
             known = True

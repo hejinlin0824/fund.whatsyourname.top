@@ -12,7 +12,7 @@ class FundForm(forms.ModelForm):
     class Meta:
         model = Fund
         fields = ["name", "code", "market", "confirm_delay", "invest_amount",
-                  "invest_frequency", "invest_weekday", "start_date", "start_total",
+                  "invest_frequency", "invest_weekday", "fee_rate", "start_date", "start_total",
                   "fund_type", "risk_level", "currency", "tags", "is_active", "end_date", "is_cleared"]
         labels = {
             "name": "基金名称",
@@ -22,6 +22,7 @@ class FundForm(forms.ModelForm):
             "invest_amount": "每次定投金额",
             "invest_frequency": "定投频率",
             "invest_weekday": "定投日",
+            "fee_rate": "申购费率(%)",
             "start_date": "起购日",
             "start_total": "起购前已有持仓",
             "fund_type": "基金类型",
@@ -40,6 +41,7 @@ class FundForm(forms.ModelForm):
             "invest_amount": "每个定投日扣款的金额（元）。",
             "invest_frequency": "每日 = 每个交易日扣款；每周 = 固定某一天扣款。",
             "invest_weekday": "只在「每周」时需要填。",
+            "fee_rate": "申购费率(%)。C 类填 0；A 类/QDII 常见 0.12（1折后）。系统会自动按 实际入账=投入×(1−费率) 扣减。",
             "start_date": "你第一次买入、且份额已确认的那天。系统从这天开始记账。",
             "start_total": "起购日【之前】已经持有的市值（含当时待确认）。从第一笔买入当天开始记就填 0 或留空。",
             "fund_type": "用于后续按类型分组统计。",
@@ -58,6 +60,7 @@ class FundForm(forms.ModelForm):
             "invest_amount": forms.NumberInput(attrs={"step": "0.01", "placeholder": "5"}),
             "invest_frequency": forms.Select(),
             "invest_weekday": forms.Select(choices=WEEKDAY_CHOICES),
+            "fee_rate": forms.NumberInput(attrs={"step": "0.01", "placeholder": "0"}),
             "start_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "start_total": forms.NumberInput(attrs={"step": "0.01", "placeholder": "0"}),
             "fund_type": forms.Select(),
@@ -72,7 +75,7 @@ class FundForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # 选填字段
-        for name in ["code", "start_total", "invest_weekday", "fund_type", "risk_level",
+        for name in ["code", "start_total", "invest_weekday", "fee_rate", "fund_type", "risk_level",
                      "currency", "tags", "end_date"]:
             self.fields[name].required = False
         # 统一套 Bootstrap 样式

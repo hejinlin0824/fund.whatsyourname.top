@@ -148,9 +148,9 @@ def dashboard(request):
         last_known = f.records.exclude(total__isnull=True).order_by("-date").first()
         if last_known:
             mv = last_known.total
-            invested_to_date = f.records.filter(date__lte=last_known.date)\
-                .aggregate(s=Sum("invested"))["s"] or Decimal("0")
-            cost = Decimal(f.start_total) + invested_to_date
+            recs_to_date = f.records.filter(date__lte=last_known.date)
+            eff_sum = sum((f.effective_invested(r.invested) for r in recs_to_date), Decimal("0"))
+            cost = Decimal(f.start_total) + eff_sum
             total_value += mv
             total_invested += cost
             total_profit += (mv - cost)

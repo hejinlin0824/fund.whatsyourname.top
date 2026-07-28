@@ -49,6 +49,15 @@ class FundModelTest(TestCase):
             is_cleared=True)
         self.assertEqual(f.dca_invest_for(date(2026, 6, 3)), Decimal("0"))   # 清仓 → 0
 
+    def test_effective_invested_with_and_without_fee(self):
+        f = Fund.objects.create(user=self.user, name="A", market="CN", confirm_delay=1,
+            invest_amount=10, invest_frequency="DAILY", start_date=date(2026, 6, 1), start_total=0,
+            fee_rate=Decimal("0.12"))
+        self.assertEqual(f.effective_invested(Decimal("10")), Decimal("9.99"))   # 10×0.9988→9.99
+        f2 = Fund.objects.create(user=self.user, name="B", market="CN", confirm_delay=1,
+            invest_amount=10, invest_frequency="DAILY", start_date=date(2026, 6, 1), start_total=0)
+        self.assertEqual(f2.effective_invested(Decimal("10")), Decimal("10.00"))  # 无费率
+
 
 class DailyRecordTest(FundModelTest):
     def test_unique_fund_date(self):

@@ -77,6 +77,18 @@ class ServicesTest(TestCase):
         self.assertTrue(S.validate_total(self.fund, _d("22.04"))["ok"])
         self.assertFalse(S.validate_total(self.fund, _d("99"))["ok"])
 
+    def test_recompute_applies_fee_rate(self):
+        # A 类：费率 0.12%，每次投10 实际入账 9.99
+        f = Fund.objects.create(user=self.user, name="Acls", market="US", confirm_delay=2,
+            invest_amount=10, invest_frequency="DAILY",
+            start_date=date(2026, 6, 1), start_total=_d(0), fee_rate=_d("0.12"))
+        DailyRecord.objects.create(fund=f, date=date(2026, 6, 1), invested=_d(10), profit=_d(0))
+        DailyRecord.objects.create(fund=f, date=date(2026, 6, 2), invested=_d(10), profit=_d(0))
+        S.recompute_fund_totals(f)
+        recs = {r.date: r for r in f.records.all()}
+        self.assertEqual(recs[date(2026, 6, 1)].total, _d("9.99"))     # 0 + 9.99 + 0
+        self.assertEqual(recs[date(2026, 6, 2)].total, _d("19.98"))    # 9.99 + 9.99 + 0
+
 
 class BackfillTest(TestCase):
     """场景：从第一笔买入开始记，start_total=0。"""
