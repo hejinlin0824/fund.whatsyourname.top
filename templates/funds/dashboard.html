@@ -19,17 +19,15 @@
 <table class="table table-striped align-middle">
   <thead><tr><th>名称</th><th>市场</th><th>最新总额</th><th>待确认</th><th>起购日</th><th></th></tr></thead>
   <tbody>
-  {% for f in funds %}
-    {% with last=f.records.last %}
+  {% for f, last in fund_pairs %}
     <tr>
       <td>{{ f.name }}{% if f.code %} <small class="text-muted">{{ f.code }}</small>{% endif %}{% if not f.is_active %} <span class="badge bg-secondary">已停</span>{% endif %}</td>
       <td>{{ f.get_market_display }}</td>
-      <td>{% if last and last.total is not None %}{{ last.total }}（待确认 {{ last.pending }}）{% elif last %}<span class="text-warning">待补录</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+      <td>{% if last %}{{ last.total }}（待确认 {{ last.pending }}）<br><small class="text-muted">截至 {{ last.date }}</small>{% else %}<span class="text-warning">待补录</span>{% endif %}</td>
       <td>{% if last %}{{ last.pending }}{% else %}—{% endif %}</td>
       <td>{{ f.start_date }}{% if f.end_date %}<br><small class="text-muted">至 {{ f.end_date }}</small>{% endif %}</td>
       <td><a class="btn btn-outline-primary btn-sm" href="{% url 'fund-detail' f.pk %}">走势 →</a></td>
     </tr>
-    {% endwith %}
   {% empty %}
     <tr><td colspan="6" class="text-center text-muted py-4">还没有基金，<a href="{% url 'fund-create' %}">添加第一只</a></td></tr>
   {% endfor %}

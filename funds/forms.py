@@ -40,7 +40,7 @@ class FundForm(forms.ModelForm):
             "invest_frequency": "每日 = 每个交易日扣款；每周 = 固定某一天扣款。",
             "invest_weekday": "只在「每周」时需要填。",
             "start_date": "你第一次买入、且份额已确认的那天。系统从这天开始记账。",
-            "start_total": "起购日当天支付宝显示的总金额（含待确认）。系统从这个数往后累加出每一天的总额。",
+            "start_total": "起购日【之前】已经持有的市值（含当时待确认）。如果是从第一笔买入当天开始记，填 0 或留空。",
             "fund_type": "用于后续按类型分组统计。",
             "risk_level": "R1 最低 ~ R5 最高。",
             "currency": "默认人民币。",
@@ -57,7 +57,7 @@ class FundForm(forms.ModelForm):
             "invest_frequency": forms.Select(),
             "invest_weekday": forms.Select(choices=WEEKDAY_CHOICES),
             "start_date": forms.DateInput(attrs={"type": "date"}),
-            "start_total": forms.NumberInput(attrs={"step": "0.01", "placeholder": "10"}),
+            "start_total": forms.NumberInput(attrs={"step": "0.01", "placeholder": "0"}),
             "fund_type": forms.Select(),
             "risk_level": forms.Select(),
             "currency": forms.Select(),
@@ -69,7 +69,7 @@ class FundForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # 选填字段
-        for name in ["code", "invest_weekday", "fund_type", "risk_level", "currency", "tags", "end_date"]:
+        for name in ["code", "start_total", "invest_weekday", "fund_type", "risk_level", "currency", "tags", "end_date"]:
             self.fields[name].required = False
         # 统一套 Bootstrap 样式
         for name, field in self.fields.items():

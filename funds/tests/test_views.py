@@ -38,8 +38,9 @@ class DailyEntryTest(FundCrudTest):
         fund = Fund.objects.create(
             user=self.u, name="A", market="CN", confirm_delay=1,
             invest_amount=Decimal("5"), invest_frequency="DAILY",
-            start_date=date(2026, 6, 1), start_total=Decimal("10"))
-        DailyRecord.objects.create(fund=fund, date=date(2026, 6, 1), invested=Decimal("5"))
+            start_date=date(2026, 6, 1), start_total=Decimal("5"))
+        DailyRecord.objects.create(fund=fund, date=date(2026, 6, 1),
+                                   invested=Decimal("5"), profit=Decimal("0"))
         return fund
 
     def test_post_saves_profit_and_recomputes(self):

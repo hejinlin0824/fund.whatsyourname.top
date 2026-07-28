@@ -3,7 +3,7 @@ from decimal import Decimal
 
 
 def compute_total(prev_total, profit, invested) -> Decimal:
-    """反推当日总额 = 前日总额 + 当日盈亏 + 当日投入。profit 为空（首日/未录）视为 0。"""
+    """反推当日总额 = 前日总额 + 当日盈亏 + 当日投入。profit 为空视为 0。"""
     p = Decimal("0") if profit is None else Decimal(profit)
     i = Decimal("0") if invested is None else Decimal(invested)
     return Decimal(prev_total) + p + i
@@ -22,39 +22,30 @@ def compute_pending(records, d: date, confirm_delay: int) -> Decimal:
 
 
 def recompute_fund_totals(fund) -> int:
-    """从 fund.start_date 起逐日重算 total 与 pending。
+    """逐日重算 total 与 pending。
 
-    级联规则：遇到 has_trade=True 但 profit 为空（未补录）的天，total 设 None，
-    且之后所有天 total 也无法确定（None）。休息日(has_trade=False)盈亏视为 0。
-    首日 total 恒为 start_total。
+    公式：total_t = running + invested_t + profit_t，running 从 start_total 起步。
+    start_total = 起购日【之前】已有的持仓（从第一笔买入开始记则填 0）。
+    级联：遇到 has_trade=True 但 profit 为空（待补录）的天，total=None，且之后皆 None。
+    休息日(has_trade=False) 盈亏视为 0。
     """
     records = list(fund.records.order_by("date"))
     if not records:
         return 0
-    prev_total = None
-    prev_known = False
-    first = True
+    running = Decimal(fund.start_total)        # 起购前已有持仓
+    known = True
     for r in records:
-        if first:
-            r.total = Decimal(fund.start_total)
-            prev_total = r.total
-            prev_known = True
-            first = False
-        else:
-            if not r.has_trade:                       # 休息日：盈亏 0
-                r.total = prev_total if prev_known else None
-            elif r.profit is None:                    # 未补录：未知，级联中断
-                r.total = None
-                prev_known = False
-            else:                                     # 已录入交易日
-                if prev_known:
-                    r.total = prev_total + Decimal(r.profit) + Decimal(r.invested)
-                else:
-                    r.total = None
-            if r.total is not None:
-                prev_total = r.total
-                prev_known = True
         r.pending = compute_pending(records, r.date, fund.confirm_delay)
+        if not r.has_trade:                    # 休息日：盈亏 0，不增减
+            r.total = running if known else None
+        elif r.profit is None:                 # 待补录：未知，级联中断
+            r.total = None
+            known = False
+        else:
+            r.total = (running + Decimal(r.profit) + Decimal(r.invested)) if known else None
+        if r.total is not None:
+            running = r.total
+            known = True
         r.save()
     return len(records)
 
@@ -62,8 +53,8 @@ def recompute_fund_totals(fund) -> int:
 def backfill_fund(fund, until: date = None) -> int:
     """从 start_date 到 min(今天, end_date或今天) 逐日补齐 DailyRecord 槽位。
 
-    已存在的日期不覆盖。周末→休息日(has_trade=False)；交易日→预填定投额、盈亏留空待补。
-    返回新建记录数。补齐后自动 recompute。
+    已存在的日期不覆盖。周末→休息日(has_trade=False)；交易日→预填定投额。
+    首日(start_date)盈亏设 0（基准，非待补录）；其余交易日盈亏留空待补。
     """
     from .models import DailyRecord
     today = date.today()
@@ -76,13 +67,14 @@ def backfill_fund(fund, until: date = None) -> int:
     d = fund.start_date
     while d <= until:
         if d not in existing:
-            if d.weekday() >= 5:                      # 周末 → 休息日
+            if d.weekday() >= 5:                          # 周末 → 休息日
                 DailyRecord.objects.create(fund=fund, date=d, has_trade=False,
                                             invested=Decimal("0"), profit=Decimal("0"))
-            else:                                     # 交易日 → 待补录
+            else:                                         # 交易日
                 inv = fund.invest_amount if fund.is_dca_day(d) else Decimal("0")
+                profit = Decimal("0") if d == fund.start_date else None
                 DailyRecord.objects.create(fund=fund, date=d, has_trade=True,
-                                            invested=inv, profit=None)
+                                            invested=inv, profit=profit)
             created += 1
         d += timedelta(days=1)
     if created:
@@ -91,7 +83,7 @@ def backfill_fund(fund, until: date = None) -> int:
 
 
 def validate_ratio(profit, prev_total, given_ratio, tolerance=Decimal("0.005")):
-    """比例校验：返回 (是否一致, 系统计算的比例)。given_ratio 为空则跳过（返回 True, None）。"""
+    """比例校验：返回 (是否一致, 系统计算的比例)。given_ratio 为空则跳过。"""
     if given_ratio is None or prev_total == 0:
         return True, None
     p = Decimal("0") if profit is None else Decimal(profit)

@@ -118,15 +118,21 @@ def dashboard(request):
     total_value = Decimal("0")
     total_invested = Decimal("0")
     total_profit = Decimal("0")
+    fund_pairs = []
     for f in funds:
-        last = f.records.order_by("-date").first()
-        if last and last.total is not None:
-            total_value += last.total
-        total_invested += f.records.aggregate(s=Sum("invested"))["s"] or Decimal("0")
-        total_profit += f.records.filter(has_trade=True).aggregate(s=Sum("profit"))["s"] or Decimal("0")
+        last_known = f.records.exclude(total__isnull=True).order_by("-date").first()
+        if last_known:
+            mv = last_known.total
+            invested_to_date = f.records.filter(date__lte=last_known.date)\
+                .aggregate(s=Sum("invested"))["s"] or Decimal("0")
+            cost = Decimal(f.start_total) + invested_to_date      # 成本 = 起购前已有 + 截止日累计投入
+            total_value += mv
+            total_invested += cost
+            total_profit += (mv - cost)                           # 盈亏 = 市值 - 成本，三者一致
+        fund_pairs.append((f, last_known))
     ratio = (total_profit / total_invested * 100) if total_invested else Decimal("0")
     return render(request, "funds/dashboard.html", {
-        "funds": funds, "total_value": total_value,
+        "fund_pairs": fund_pairs, "total_value": total_value,
         "total_invested": total_invested, "total_profit": total_profit, "ratio": ratio,
     })
 
