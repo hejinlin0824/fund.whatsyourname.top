@@ -6,5 +6,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls")),
     path("funds/", include("funds.urls")),
+    path("news/", include("news.urls")),
     path("", fund_views.dashboard, name="dashboard"),
 ]

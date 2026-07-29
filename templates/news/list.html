@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}新闻 · Whatsyour{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h4 class="section-title">新闻</h4>
+  <form method="get" class="d-flex gap-2" role="search">
+    <input type="hidden" name="cat" value="{{ cat }}">
+    <input type="search" name="q" value="{{ q }}" placeholder="搜索标题…" style="max-width:200px">
+    <button class="btn btn-outline-secondary btn-sm" type="submit">搜索</button>
+  </form>
+</div>
+
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <a class="btn btn-sm {% if not cat %}btn-dark{% else %}btn-outline-secondary{% endif %}" href="{% url 'news-list' %}">全部</a>
+  {% for key, label in cats %}
+    <a class="btn btn-sm {% if cat == key %}btn-dark{% else %}btn-outline-secondary{% endif %}"
+       href="?cat={{ key }}{% if q %}&q={{ q }}{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="panel">
+  {% if articles %}
+  <ul class="list-unstyled mb-0">
+    {% for a in articles %}
+    <li class="py-3 border-bottom">
+      <a href="{{ a.url }}" target="_blank" rel="noopener" class="fw-semibold text-decoration-none" style="font-size:1rem">{{ a.title }}</a>
+      <div class="muted" style="font-size:.83rem; margin-top:.2rem">{{ a.summary|truncatechars:140 }}</div>
+      <div class="muted mt-1" style="font-size:.72rem">
+        <span class="badge bg-light text-dark border">{{ a.get_category_display }}</span>
+        {{ a.source }} · {{ a.published_at|date:"Y-m-d H:i" }}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted py-4 mb-0 text-center">还没有新闻。运行 <code>manage.py fetch_news</code> 抓取，或等 cron 触发。</p>
+  {% endif %}
+</div>
+{% endblock %}

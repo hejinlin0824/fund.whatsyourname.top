@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "accounts",
     "funds",
+    "news",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
@@ -80,3 +82,6 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+
+# DRF
+REST_FRAMEWORK = {"DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"]}

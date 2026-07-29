@@ -55,6 +55,7 @@
         <li><a class="nav-link" href="{% url 'daily-entry' %}">录入</a></li>
         <li><a class="nav-link" href="{% url 'calendar' %}">日历</a></li>
         <li><a class="nav-link" href="{% url 'portfolio' %}">组合</a></li>
+        <li><a class="nav-link" href="{% url 'news-list' %}">新闻</a></li>
         {% if user.is_authenticated %}
           <li class="navbar-text ms-2 me-1">{{ user.username }}</li>
           <li>
