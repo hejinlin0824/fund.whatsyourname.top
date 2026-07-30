@@ -8,20 +8,38 @@ SCREENING_PROMPT = """你是基金投研助理。下面按分类给出今日新�
 今日标题（按分类，格式 分类: id=标题）：
 {titles}"""
 
-ANALYSIS_SYSTEM = "你是资深基金投顾，用中文输出严格 JSON，面向基金小白，语气通俗、结论明确。"
+ANALYSIS_SYSTEM = "你是资深基金投顾，用中文输出严格 JSON，面向基金小白，语气通俗、结论明确、有据可依。"
 
-ANALYSIS_PROMPT_NOON = """基于以下筛选后的新闻摘要与用户持仓，生成【午间速览】。只返回 JSON，结构：
+_REFS_RULE = """硬性要求：
+1. direction/action 必须点名用户持有的具体基金。
+2. 每条 bias 与 position_advice 都必须带 refs 数组（至少 1 条），注明结论参考了什么：
+   - kind="仓位"：具体到哪只基金及其现状（市场/类型/市值/收益率/定投状态）。
+   - kind="新闻"：点明参考的新闻标题。
+3. 免责声明由系统加，你不用写。"""
+
+ANALYSIS_PROMPT_NOON = """基于以下筛选后的新闻摘要、用户持仓与今日操作，生成【午间速览】。只返回 JSON：
 {"market_brief":{"politics":[{"title":"","impact":""}],"finance_cn":[],"finance_oversea":[],"tech":[]},
- "bias":[{"fund":"","direction":"利好|利空|中性","reason":""}],
- "position_advice":[{"fund":"","action":"继续定投|暂停|减仓|加仓|观望","reason":""}],
+ "bias":[{"fund":"","direction":"利好|利空|中性","reason":"","refs":[{"kind":"仓位|新闻","text":""}]}],
+ "position_advice":[{"fund":"","action":"继续定投|暂停|减仓|加仓|观望","reason":"","refs":[{"kind":"仓位|新闻","text":""}]}],
  "lesson":{"title":"","body":""}}
-说明：direction/action 必须点名用户具体基金；末尾免责声明由系统加，你不用写。
+""" + _REFS_RULE + """
+额外：不要输出 tomorrow 字段（午间版无明日预判）。
 持仓：
 {portfolio}
+{operations}
 筛选后新闻摘要（id=标题：摘要）：
 {summaries}"""
 
-ANALYSIS_PROMPT_EVENING = ANALYSIS_PROMPT_NOON.replace(
-    "生成【午间速览】", "生成【一日总结+明日预判】") + """
-额外字段 tomorrow：{"events":[{"time":"","event":""}],"watch":"明日关注点位/数据一句话"}
-即在 JSON 顶层追加 "tomorrow" 对象。"""
+ANALYSIS_PROMPT_EVENING = """基于以下筛选后的新闻摘要、用户持仓与今日操作，生成【一日总结+明日预判】。只返回 JSON：
+{"market_brief":{"politics":[{"title":"","impact":""}],"finance_cn":[],"finance_oversea":[],"tech":[]},
+ "bias":[{"fund":"","direction":"利好|利空|中性","reason":"","refs":[{"kind":"仓位|新闻","text":""}]}],
+ "position_advice":[{"fund":"","action":"继续定投|暂停|减仓|加仓|观望","reason":"","refs":[{"kind":"仓位|新闻","text":""}]}],
+ "tomorrow":{"events":[{"time":"","event":""}],"watch":""},
+ "lesson":{"title":"","body":""}}
+""" + _REFS_RULE + """
+额外：tomorrow 给出明日关键事件/数据与关注点位。
+持仓：
+{portfolio}
+{operations}
+筛选后新闻摘要（id=标题：摘要）：
+{summaries}"""

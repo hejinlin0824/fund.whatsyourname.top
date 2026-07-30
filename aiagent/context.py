@@ -29,3 +29,12 @@ def portfolio_text(snapshot: dict) -> str:
         f'组合合计: 市值{snapshot["total_mv"]} 成本{snapshot["total_cost"]} '
         f'盈亏{snapshot["total_profit"]} 收益率{snapshot["total_roi"]}%')
     return "\n".join(lines)
+
+
+def recent_operations_text(user, date) -> str:
+    """用户当日操作（新增/调额/停投等），无操作返回空串。"""
+    from aiagent.models import ActionLog
+    logs = ActionLog.objects.filter(user=user, date=date).order_by("created_at")
+    if not logs:
+        return ""
+    return "【今日操作】\n" + "\n".join(f"- {l.text}" for l in logs)

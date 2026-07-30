@@ -28,7 +28,14 @@ def _degraded_html(reason: str, titles_by_cat: dict) -> str:
 def generate_report(user, report_type: str) -> AnalysisReport:
     if not user.deepseek_key:
         raise NoApiKey(f"{user.username} has no deepseek key")
-    today = _today()
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+    if report_type == "evening":
+        mode = "evening"
+    elif report_type == "ondemand":
+        mode = "evening" if now.hour >= 15 else "noon"
+    else:
+        mode = "noon"
     snap = portfolio_snapshot(user)
     ptext = context.portfolio_text(snap)
     titles_by_cat = context.news_titles_by_category(today)
@@ -48,7 +55,8 @@ def generate_report(user, report_type: str) -> AnalysisReport:
                        "summary": summaries[i]["summary"],
                        "category": summaries[i]["category"]}
                       for i in ids if i in summaries]
-            analysis_dict = analysis.analyze(user, picked, ptext, report_type)
+            operations_text = context.recent_operations_text(user, today)
+            analysis_dict = analysis.analyze(user, picked, ptext, operations_text, mode)
             html = reports.render(analysis_dict, report_type)
         except (screening.ScreeningError, analysis.AnalysisError) as e:
             logger.warning("AI degrade for %s: %s", user.username, e)

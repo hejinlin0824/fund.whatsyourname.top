@@ -16,14 +16,16 @@ def _strip_fence(s: str) -> str:
     return m.group(0) if m else s
 
 
-def analyze(user, picked: list, portfolio_text: str, report_type: str) -> dict:
-    tmpl = prompts.ANALYSIS_PROMPT_EVENING if report_type == "evening" else prompts.ANALYSIS_PROMPT_NOON
+def analyze(user, picked, portfolio_text, operations_text, mode="noon") -> dict:
+    """第②阶段：摘要+仓位+今日操作 → 结构化 JSON。mode 决定提示词与模型(noon=chat / evening=reasoner)。"""
+    tmpl = prompts.ANALYSIS_PROMPT_EVENING if mode == "evening" else prompts.ANALYSIS_PROMPT_NOON
     msg = (tmpl
            .replace("{portfolio}", portfolio_text)
+           .replace("{operations}", operations_text or "（今日无操作）")
            .replace("{summaries}", _summaries_block(picked)))
     messages = [{"role": "system", "content": prompts.ANALYSIS_SYSTEM},
                 {"role": "user", "content": msg}]
-    caller = client.reasoner if report_type == "evening" else client.chat
+    caller = client.reasoner if mode == "evening" else client.chat
     res = caller(user, messages, json_mode=True)
     if not res["ok"]:
         raise AnalysisError(f"analysis call failed: {res['error']}")

@@ -31,3 +31,28 @@ class AnalysisReport(models.Model):
 
     def __str__(self):
         return f"{self.user.username} {self.type} {self.date}"
+
+
+class ActionLog(models.Model):
+    """用户当日的关键操作（新增/调整基金等），用于注入当日 AI 总结。"""
+    KIND_CHOICES = [
+        ("fund_added", "新增基金"),
+        ("invest_changed", "调整定投"),
+        ("stopped", "停投"),
+        ("resumed", "恢复定投"),
+        ("cleared", "清仓"),
+        ("edited", "编辑资料"),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name="action_logs")
+    date = models.DateField(db_index=True)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    text = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "-date"])]
+
+    def __str__(self):
+        return f"{self.user.username} {self.date} {self.kind}"

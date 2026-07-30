@@ -1,34 +1,61 @@
 {% load ai_extras %}
+<style>
+.ai-sec{margin:1rem 0;padding:.8rem 1rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;}
+.ai-sec h2{font-size:1.05rem;font-weight:700;margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;}
+.ai-sec h4{font-size:.92rem;font-weight:600;color:#475569;margin:.4rem 0 .2rem;}
+.ai-list{margin:0;padding-left:1.2rem;}
+.ai-list li{margin:.25rem 0;}
+.ai-refs{color:#94a3b8;font-size:.8rem;margin:.15rem 0 .4rem;}
+.ai-disclaimer{color:#94a3b8;font-size:.8rem;margin-top:1rem;}
+</style>
 <div class="ai-report">
-  <h2>📰 今日新闻速览</h2>
-  {% for cat, label in cat_labels.items %}
-    {% with items=analysis.market_brief|get:cat %}
-      {% if items %}
-        <h4>{{ label }}</h4>
-        <ul>{% for it in items %}<li>{{ it.title }} —— <em>{{ it.impact }}</em></li>{% endfor %}</ul>
-      {% endif %}
-    {% endwith %}
-  {% endfor %}
+  <section class="ai-sec">
+    <h2><i class="bi bi-newspaper"></i>今日新闻速览</h2>
+    {% for cat, label in cat_labels.items %}
+      {% with items=analysis.market_brief|get:cat %}
+        {% if items %}
+          <h4>{{ label }}</h4>
+          <ul>{% for it in items %}<li>{{ it.title }}{% if it.impact %} —— <em>{{ it.impact }}</em>{% endif %}</li>{% endfor %}</ul>
+        {% endif %}
+      {% endwith %}
+    {% endfor %}
+  </section>
 
-  <h2>🎯 利好 / 利空方向</h2>
-  <ul>{% for b in analysis.bias %}
-    <li><strong>{{ b.fund }}</strong> · <span>{{ b.direction }}</span> —— {{ b.reason }}</li>
-  {% empty %}<li>（暂无）</li>{% endfor %}</ul>
+  <section class="ai-sec">
+    <h2><i class="bi bi-graph-up-arrow"></i>利好 / 利空方向</h2>
+    <ul class="ai-list">
+      {% for b in analysis.bias %}
+        <li><strong>{{ b.fund }}</strong> · <span>{{ b.direction }}</span> —— {{ b.reason }}
+          {% if b.refs %}<div class="ai-refs">参考：{% for r in b.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% if not forloop.last %}；{% endif %}{% endfor %}</div>{% endif %}
+        </li>
+      {% empty %}<li>（暂无）</li>{% endfor %}
+    </ul>
+  </section>
 
-  <h2>💼 仓位建议（明日）</h2>
-  <ul>{% for a in analysis.position_advice %}
-    <li><strong>{{ a.fund }}</strong> → {{ a.action }}：{{ a.reason }}</li>
-  {% empty %}<li>（暂无）</li>{% endfor %}</ul>
+  <section class="ai-sec">
+    <h2><i class="bi bi-briefcase"></i>仓位建议（明日）</h2>
+    <ul class="ai-list">
+      {% for a in analysis.position_advice %}
+        <li><strong>{{ a.fund }}</strong> → {{ a.action }}：{{ a.reason }}
+          {% if a.refs %}<div class="ai-refs">参考：{% for r in a.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% if not forloop.last %}；{% endif %}{% endfor %}</div>{% endif %}
+        </li>
+      {% empty %}<li>（暂无）</li>{% endfor %}
+    </ul>
+  </section>
 
-  {% if report_type == "evening" and analysis.tomorrow %}
-  <h2>🌅 明日预判</h2>
-  <ul>{% for e in analysis.tomorrow.events %}<li>{{ e.time }} {{ e.event }}</li>{% endfor %}</ul>
-  <p>关注：{{ analysis.tomorrow.watch }}</p>
+  {% if analysis.tomorrow %}
+  <section class="ai-sec">
+    <h2><i class="bi bi-sun"></i>明日预判</h2>
+    <ul>{% for e in analysis.tomorrow.events %}<li>{{ e.time }} {{ e.event }}</li>{% endfor %}</ul>
+    {% if analysis.tomorrow.watch %}<p>关注：{{ analysis.tomorrow.watch }}</p>{% endif %}
+  </section>
   {% endif %}
 
-  <h2>📚 小白课堂</h2>
-  {% if analysis.lesson.title %}<h4>{{ analysis.lesson.title }}</h4>{% endif %}
-  {% if analysis.lesson.body %}<p>{{ analysis.lesson.body }}</p>{% endif %}
+  <section class="ai-sec">
+    <h2><i class="bi bi-mortarboard"></i>小白课堂</h2>
+    {% if analysis.lesson.title %}<h4>{{ analysis.lesson.title }}</h4>{% endif %}
+    {% if analysis.lesson.body %}<p>{{ analysis.lesson.body }}</p>{% endif %}
+  </section>
 
-  <p class="disclaimer">⚠️ 本报告由 AI 生成，仅供参考，不构成投资建议，据此操作盈亏自负。</p>
+  <p class="ai-disclaimer"><i class="bi bi-exclamation-triangle"></i>本报告由 AI 生成，仅供参考，不构成投资建议，据此操作盈亏自负。</p>
 </div>

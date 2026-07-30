@@ -11,6 +11,7 @@ from django.urls import reverse
 from .models import Fund, DailyRecord
 from .forms import FundForm, DailyEntryFormSet
 from . import services
+from .actions import log_fund_create, log_fund_edit
 
 
 def _today(request):
@@ -66,6 +67,7 @@ def fund_create(request):
         _finalize_end_date(fund)
         services.backfill_fund(fund)
         services.recompute_fund_totals(fund)
+        log_fund_create(request.user, fund)
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
@@ -75,10 +77,13 @@ def fund_edit(request, pk):
     fund = get_object_or_404(Fund, pk=pk, user=request.user)
     form = FundForm(request.POST or None, instance=fund)
     if form.is_valid():
+        old = {"invest_amount": fund.invest_amount, "is_active": fund.is_active,
+               "is_cleared": fund.is_cleared, "name": fund.name}
         fund = form.save()
         _finalize_end_date(fund)
         services.backfill_fund(fund)
         services.recompute_fund_totals(fund)
+        log_fund_edit(request.user, fund, old)
         return redirect("fund-list")
     return render(request, "funds/fund_form.html", {"form": form})
 
