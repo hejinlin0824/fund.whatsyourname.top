@@ -37,9 +37,20 @@ Python 3.12 · Django 6.0.1 · SQLite · Bootstrap 5 + Chart.js · DRF · QQ SMT
 ├─ news/                      # 新闻：Source/Article + 抓取/清洗/DRF
 │   ├─ cleaners.py / fetchers.py / api.py
 │   └─ management/commands/fetch_news.py
+├─ aiagent/                   # AI 分析：两段式 LLM（标题初筛→深读），报告+邮件+站内历史
+│   ├─ client.py / screening.py / analysis.py / reports.py / services.py / emails.py
+│   └─ management/commands/run_ai_morning.py / run_ai_evening.py
 ├─ templates/  static/
 └─ docs/                      # 设计文档 + DEPLOY.md
 ```
+
+## AI 智能体分析（aiagent）
+每日结合新闻+仓位生成 AI 报告，午间(12:30)/晚间(18:00)各发一封邮件，站内 `/aiagent/` 可翻阅历史 + 「立即分析」(每日 5 次)。
+- **两段式流水线（省 token）**：①`screening` 喂当天全部标题(chat)挑出值得深读的~15条 → ②`analysis` 只对这些取摘要+仓位深读(午=chat / 晚=reasoner) → 结构化 JSON → `reports.render` 成 5 段 HTML（新闻速览/利好方向/仓位建议/明日预判/小白课堂 + 免责声明）。
+- **激活前提**：用户必须在 `/aiagent/key/` 填入自己的 DeepSeek key（Fernet 加密存 `accounts.User.deepseek_key_enc`，密钥 `JK_FERNET_KEY` 在 `.env`）。没填 → 定时命令跳过该用户、手动触发跳转去填 key。
+- **降级**：key 缺失/失效/限流/坏 JSON → 发降级邮件（正文置顶说明 + 当日新闻标题清单），报告 `status=degraded`，绝不静默。
+- **仓位上下文**：`funds/services.portfolio_snapshot(user)` 返回纯数据 dict（aiagent 不翻 funds 内部）。
+- 设计 `docs/superpowers/specs/2026-07-30-ai-agent-analysis-design.md`，计划 `docs/superpowers/plans/2026-07-30-ai-agent-analysis.md`。
 
 ## 核心领域逻辑（最容易改错的地方）
 
