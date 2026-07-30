@@ -14,7 +14,19 @@ ON_DEMAND_DAILY_LIMIT = 5
 @login_required
 def report_list(request):
     reps = AnalysisReport.objects.filter(user=request.user)
-    return render(request, "aiagent/report_list.html", {"reports": reps})
+    today = timezone.localdate()
+    used = AnalysisReport.objects.filter(user=request.user, type="ondemand", date=today).count()
+    remaining = max(0, ON_DEMAND_DAILY_LIMIT - used)
+    return render(request, "aiagent/report_list.html",
+                  {"reports": reps, "limit": ON_DEMAND_DAILY_LIMIT, "remaining": remaining})
+
+
+@login_required
+@require_POST
+def report_delete(request, pk):
+    rep = get_object_or_404(AnalysisReport, pk=pk, user=request.user)
+    rep.delete()
+    return redirect("aiagent:report-list")
 
 
 @login_required

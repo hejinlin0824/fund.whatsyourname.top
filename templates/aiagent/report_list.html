@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>AI 报告</h1>
-<div class="d-flex flex-wrap gap-2 mb-3">
-  <form method="post" action="{% url 'aiagent:on-demand' %}">{% csrf_token %}
-    <button type="submit" class="btn btn-primary btn-sm">⚡ 立即分析（每日 5 次）</button>
-  </form>
-  <a class="btn btn-outline-secondary btn-sm" href="{% url 'aiagent:key-settings' %}">DeepSeek Key 设置</a>
+<div class="panel mb-3">
+  <div class="d-flex flex-wrap align-items-center gap-3">
+    <form id="ondemand-form" method="post" action="{% url 'aiagent:on-demand' %}">{% csrf_token %}
+      <button id="ondemand-btn" type="submit" class="btn btn-primary btn-sm"
+              {% if remaining == 0 %}disabled{% endif %}>
+        <i class="bi bi-lightning-charge"></i> 立即分析
+      </button>
+    </form>
+    <span class="muted small">今日还剩 <strong>{{ remaining }}</strong>/{{ limit }} 次</span>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'aiagent:key-settings' %}">
+      <i class="bi bi-key"></i> DeepSeek Key
+    </a>
+  </div>
 </div>
 {% if reports %}
 <ul class="list-group">
@@ -18,4 +26,16 @@
 {% else %}
 <p class="muted">还没有 AI 报告。填好 DeepSeek Key 后点「立即分析」，或等午间/晚间自动生成。</p>
 {% endif %}
+
+<script>
+(function () {
+  var f = document.getElementById('ondemand-form');
+  if (!f) return;
+  f.addEventListener('submit', function () {
+    var b = document.getElementById('ondemand-btn');
+    b.disabled = true;
+    b.innerHTML = '<span class="spinner-border spinner-border-sm"></span> AI 分析生成中…（约 10–30 秒）';
+  });
+})();
+</script>
 {% endblock %}
