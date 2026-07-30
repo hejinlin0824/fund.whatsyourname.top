@@ -44,19 +44,8 @@ def _finalize_end_date(fund):
 
 
 def _fund_summary(fund):
-    """单基金汇总：最新市值、成本、盈亏、收益率（截止最新已知总额那天）。"""
-    last = fund.records.exclude(total__isnull=True).order_by("-date").first()
-    if last:
-        recs = fund.records.filter(date__lte=last.date)
-        inv = sum((fund.effective_invested(r.invested) for r in recs), Decimal("0"))
-        cost = Decimal(fund.start_total) + inv
-        mv = last.total
-    else:
-        mv, cost = Decimal("0"), Decimal(fund.start_total)
-    profit = mv - cost
-    roi = (profit / cost * 100) if cost else Decimal("0")
-    return {"mv": mv, "cost": cost, "profit": profit, "roi": roi,
-            "last_date": last.date if last else None}
+    """单基金汇总（委托 services.fund_summary，保持单一计算口径）。"""
+    return services.fund_summary(fund)
 
 
 @login_required

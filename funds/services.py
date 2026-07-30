@@ -96,3 +96,46 @@ def validate_total(fund, current_total) -> dict:
         return {"ok": False, "last_total": None, "diff": None}
     diff = Decimal(last.total) - Decimal(current_total)
     return {"ok": abs(diff) <= Decimal("0.01"), "last_total": last.total, "diff": diff}
+
+
+def fund_summary(fund) -> dict:
+    """单基金汇总：最新市值、成本、盈亏、收益率（截止最新已知总额那天）。
+    views 与 aiagent 共用此实现，避免两处口径漂移。"""
+    last = fund.records.exclude(total__isnull=True).order_by("-date").first()
+    if last:
+        recs = fund.records.filter(date__lte=last.date)
+        inv = sum((fund.effective_invested(r.invested) for r in recs), Decimal("0"))
+        cost = Decimal(fund.start_total) + inv
+        mv = last.total
+    else:
+        mv, cost = Decimal("0"), Decimal(fund.start_total)
+    profit = mv - cost
+    roi = (profit / cost * 100) if cost else Decimal("0")
+    return {"mv": mv, "cost": cost, "profit": profit, "roi": roi,
+            "last_date": last.date if last else None}
+
+
+def portfolio_snapshot(user) -> dict:
+    """用户仓位快照（纯数据，供 aiagent 等外部消费）。数值一律 str() 避免 JSON 精度问题。"""
+    from .models import Fund
+    funds_out = []
+    for f in Fund.objects.filter(user=user):
+        s = fund_summary(f)
+        trend = list(
+            f.records.exclude(profit__isnull=True)
+             .order_by("-date").values_list("date", "profit")[:14])
+        funds_out.append({
+            "name": f.name, "code": f.code, "market": f.market,
+            "fund_type": f.fund_type, "currency": f.currency, "is_active": f.is_active,
+            "mv": str(s["mv"]), "cost": str(s["cost"]),
+            "profit": str(s["profit"]), "roi": str(s["roi"]),
+            "last_date": s["last_date"].isoformat() if s["last_date"] else None,
+            "trend_14d": [(d.isoformat(), str(p)) for d, p in reversed(trend)],
+        })
+    tot_mv = sum((Decimal(x["mv"]) for x in funds_out), Decimal("0"))
+    tot_cost = sum((Decimal(x["cost"]) for x in funds_out), Decimal("0"))
+    tot_profit = tot_mv - tot_cost
+    tot_roi = (tot_profit / tot_cost * 100) if tot_cost else Decimal("0")
+    return {"total_mv": str(tot_mv), "total_cost": str(tot_cost),
+            "total_profit": str(tot_profit), "total_roi": str(tot_roi),
+            "funds": funds_out}
