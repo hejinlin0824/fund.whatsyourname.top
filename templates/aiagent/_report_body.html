@@ -1,12 +1,21 @@
 {% load ai_extras %}
 <style>
-.ai-sec{margin:1rem 0;padding:.8rem 1rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;}
-.ai-sec h2{font-size:1.05rem;font-weight:700;margin:0 0 .5rem;display:flex;align-items:center;gap:.4rem;}
-.ai-sec h4{font-size:.92rem;font-weight:600;color:#475569;margin:.4rem 0 .2rem;}
-.ai-list{margin:0;padding-left:1.2rem;}
-.ai-list li{margin:.25rem 0;}
-.ai-refs{color:#94a3b8;font-size:.8rem;margin:.15rem 0 .4rem;}
-.ai-disclaimer{color:#94a3b8;font-size:.8rem;margin-top:1rem;}
+.ai-sec{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:1rem 1.1rem;margin:0 0 1rem;}
+.ai-sec h2{font-size:1.05rem;font-weight:700;color:#1f2937;margin:0 0 .6rem;display:flex;align-items:center;gap:.45rem;}
+.ai-sec h2 i{color:#4f46e5;font-size:1rem;}
+.ai-sec h4{font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin:.6rem 0 .25rem;}
+.ai-sec ul{margin:0;padding-left:1.15rem;}
+.ai-sec li{margin:.22rem 0;line-height:1.55;}
+.ai-sec p{margin:.2rem 0 0;}
+.ai-fund{font-weight:600;color:#1f2937;}
+.ai-bull{color:#dc2626;font-weight:600;}
+.ai-bear{color:#059669;font-weight:600;}
+.ai-neutral{color:#94a3b8;font-weight:600;}
+.ai-action{display:inline-block;background:#f1f5f9;color:#475569;font-size:.78rem;font-weight:600;padding:1px 9px;border-radius:6px;}
+.ai-refs{color:#94a3b8;font-size:.8rem;margin:.2rem 0 .1rem;}
+.ai-refs span{margin-right:.45rem;}
+.ai-disclaimer{color:#94a3b8;font-size:.8rem;border-top:1px solid #e5e7eb;padding-top:.6rem;margin:0;}
+.ai-disclaimer i{color:#f59e0b;}
 </style>
 <div class="ai-report">
   <section class="ai-sec">
@@ -15,7 +24,7 @@
       {% with items=analysis.market_brief|get:cat %}
         {% if items %}
           <h4>{{ label }}</h4>
-          <ul>{% for it in items %}<li>{{ it.title }}{% if it.impact %} —— <em>{{ it.impact }}</em>{% endif %}</li>{% endfor %}</ul>
+          <ul>{% for it in items %}<li>{{ it.title }}{% if it.impact %} —— <span class="muted">{{ it.impact }}</span>{% endif %}</li>{% endfor %}</ul>
         {% endif %}
       {% endwith %}
     {% endfor %}
@@ -23,23 +32,25 @@
 
   <section class="ai-sec">
     <h2><i class="bi bi-graph-up-arrow"></i>利好 / 利空方向</h2>
-    <ul class="ai-list">
+    <ul>
       {% for b in analysis.bias %}
-        <li><strong>{{ b.fund }}</strong> · <span>{{ b.direction }}</span> —— {{ b.reason }}
-          {% if b.refs %}<div class="ai-refs">参考：{% for r in b.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% if not forloop.last %}；{% endif %}{% endfor %}</div>{% endif %}
+        <li><span class="ai-fund">{{ b.fund }}</span> ·
+          <span class="{% if b.direction == '利好' %}ai-bull{% elif b.direction == '利空' %}ai-bear{% else %}ai-neutral{% endif %}">{{ b.direction }}</span>
+          —— {{ b.reason }}
+          {% if b.refs %}<div class="ai-refs">参考：{% for r in b.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% endfor %}</div>{% endif %}
         </li>
-      {% empty %}<li>（暂无）</li>{% endfor %}
+      {% empty %}<li class="muted">（暂无）</li>{% endfor %}
     </ul>
   </section>
 
   <section class="ai-sec">
     <h2><i class="bi bi-briefcase"></i>仓位建议（明日）</h2>
-    <ul class="ai-list">
+    <ul>
       {% for a in analysis.position_advice %}
-        <li><strong>{{ a.fund }}</strong> → {{ a.action }}：{{ a.reason }}
-          {% if a.refs %}<div class="ai-refs">参考：{% for r in a.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% if not forloop.last %}；{% endif %}{% endfor %}</div>{% endif %}
+        <li><span class="ai-fund">{{ a.fund }}</span> → <span class="ai-action">{{ a.action }}</span>：{{ a.reason }}
+          {% if a.refs %}<div class="ai-refs">参考：{% for r in a.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% endfor %}</div>{% endif %}
         </li>
-      {% empty %}<li>（暂无）</li>{% endfor %}
+      {% empty %}<li class="muted">（暂无）</li>{% endfor %}
     </ul>
   </section>
 
@@ -47,15 +58,15 @@
   <section class="ai-sec">
     <h2><i class="bi bi-sun"></i>明日预判</h2>
     <ul>{% for e in analysis.tomorrow.events %}<li>{{ e.time }} {{ e.event }}</li>{% endfor %}</ul>
-    {% if analysis.tomorrow.watch %}<p>关注：{{ analysis.tomorrow.watch }}</p>{% endif %}
+    {% if analysis.tomorrow.watch %}<p class="muted">关注：{{ analysis.tomorrow.watch }}</p>{% endif %}
   </section>
   {% endif %}
 
   <section class="ai-sec">
     <h2><i class="bi bi-mortarboard"></i>小白课堂</h2>
-    {% if analysis.lesson.title %}<h4>{{ analysis.lesson.title }}</h4>{% endif %}
+    {% if analysis.lesson.title %}<div class="ai-fund" style="margin-bottom:.15rem">{{ analysis.lesson.title }}</div>{% endif %}
     {% if analysis.lesson.body %}<p>{{ analysis.lesson.body }}</p>{% endif %}
   </section>
 
-  <p class="ai-disclaimer"><i class="bi bi-exclamation-triangle"></i>本报告由 AI 生成，仅供参考，不构成投资建议，据此操作盈亏自负。</p>
+  <p class="ai-disclaimer"><i class="bi bi-exclamation-triangle"></i> 本报告由 AI 生成，仅供参考，不构成投资建议，据此操作盈亏自负。</p>
 </div>

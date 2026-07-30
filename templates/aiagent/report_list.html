@@ -1,32 +1,37 @@
 {% extends "base.html" %}
+{% block title %}AI 报告 · Whatsyour{% endblock %}
 {% block content %}
-<h1>AI 报告</h1>
-<div class="panel mb-3">
-  <div class="d-flex flex-wrap align-items-center gap-3">
-    <form id="ondemand-form" method="post" action="{% url 'aiagent:on-demand' %}">{% csrf_token %}
-      <button id="ondemand-btn" type="submit" class="btn btn-primary btn-sm"
-              {% if remaining == 0 %}disabled{% endif %}>
-        <i class="bi bi-lightning-charge"></i> 立即分析
-      </button>
-    </form>
-    <span class="muted small">今日还剩 <strong>{{ remaining }}</strong>/{{ limit }} 次</span>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'aiagent:key-settings' %}">
-      <i class="bi bi-key"></i> DeepSeek Key
-    </a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="section-title">AI 报告</h4>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'aiagent:key-settings' %}"><i class="bi bi-key"></i> DeepSeek Key</a>
+</div>
+<div class="panel mb-3 d-flex flex-wrap align-items-center gap-3">
+  <form id="ondemand-form" method="post" action="{% url 'aiagent:on-demand' %}">{% csrf_token %}
+    <button id="ondemand-btn" type="submit" class="btn btn-primary btn-sm" {% if remaining == 0 %}disabled{% endif %}>
+      <i class="bi bi-lightning-charge"></i> 立即分析
+    </button>
+  </form>
+  <span class="muted small">今日还剩 <strong>{{ remaining }}</strong>/{{ limit }} 次</span>
+</div>
+<div class="panel">
+  <div class="table-responsive">
+  <table class="table table-hover align-middle mb-0">
+    <thead><tr><th>类型</th><th>日期</th><th>状态</th><th class="text-end">操作</th></tr></thead>
+    <tbody>
+    {% for r in reports %}
+      <tr>
+        <td>{{ r.get_type_display }}</td>
+        <td class="muted">{{ r.date }}</td>
+        <td><span class="badge bg-{% if r.status == 'ok' %}success{% elif r.status == 'degraded' %}warning{% else %}danger{% endif %}">{{ r.get_status_display }}</span></td>
+        <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="{% url 'aiagent:report-detail' r.id %}">查看</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="text-center muted py-4">还没有 AI 报告。填好 DeepSeek Key 后点「立即分析」，或等午间/晚间自动生成。</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
   </div>
 </div>
-{% if reports %}
-<ul class="list-group">
-  {% for r in reports %}
-    <li class="list-group-item">
-      <a href="{% url 'aiagent:report-detail' r.id %}">{{ r.get_type_display }} · {{ r.date }} · {{ r.get_status_display }}</a>
-    </li>
-  {% endfor %}
-</ul>
-{% else %}
-<p class="muted">还没有 AI 报告。填好 DeepSeek Key 后点「立即分析」，或等午间/晚间自动生成。</p>
-{% endif %}
-
 <script>
 (function () {
   var f = document.getElementById('ondemand-form');
