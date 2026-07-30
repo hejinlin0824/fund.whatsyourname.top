@@ -1,17 +1,28 @@
 {% extends "base.html" %}
 {% block title %}AI 报告 · Whatsyour{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-  <div>
-    <a href="{% url 'aiagent:report-list' %}" class="muted" style="font-size:.8rem;text-decoration:none">← 返回列表</a>
-    <h4 class="section-title mt-1 mb-0">{{ report.get_type_display }}报告 · {{ report.date }}
-      <span class="badge bg-{% if report.status == 'ok' %}success{% elif report.status == 'degraded' %}warning{% else %}danger{% endif %}">{{ report.get_status_display }}</span>
-    </h4>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h4 class="section-title mb-0"><i class="bi bi-robot text-primary"></i>
+    {{ report.get_type_display }}报告 · {{ report.date }}
+    <span class="badge bg-{% if report.status == 'ok' %}success{% elif report.status == 'degraded' %}warning{% else %}danger{% endif %}">{{ report.get_status_display }}</span>
+  </h4>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'aiagent:report-list' %}"><i class="bi bi-arrow-left"></i> 返回列表</a>
+    <form method="post" action="{% url 'aiagent:report-delete' report.id %}" onsubmit="return confirm('删除这份报告？');" class="m-0">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> 删除</button>
+    </form>
   </div>
-  <form method="post" action="{% url 'aiagent:report-delete' report.id %}" onsubmit="return confirm('删除这份报告？');" class="m-0">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> 删除</button>
-  </form>
 </div>
+
+{% if snap %}
+<div class="row g-2 g-md-3 mb-3">
+  <div class="col-6 col-md-3"><div class="panel stat h-100"><div class="label">总市值</div><div class="value">¥{{ snap.total_mv|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="panel stat h-100"><div class="label">总投入</div><div class="value">¥{{ snap.total_cost|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="panel stat h-100"><div class="label">总盈亏</div><div class="value {% if snap.total_profit >= 0 %}pos{% else %}neg{% endif %}">{{ snap.total_profit|floatformat:2 }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="panel stat h-100"><div class="label">收益率</div><div class="value {% if snap.total_roi >= 0 %}pos{% else %}neg{% endif %}">{{ snap.total_roi|floatformat:2 }}%</div></div></div>
+</div>
+{% endif %}
+
 {{ report.content_html|safe }}
 {% endblock %}

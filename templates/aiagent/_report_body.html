@@ -1,24 +1,30 @@
 {% load ai_extras %}
 <style>
-.ai-sec{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:1rem 1.1rem;margin:0 0 1rem;}
-.ai-sec h2{font-size:1.05rem;font-weight:700;color:#1f2937;margin:0 0 .6rem;display:flex;align-items:center;gap:.45rem;}
+.ai-sec{border:1px solid #e5e7eb;border-left:3px solid #4f46e5;border-radius:8px;background:#fff;padding:1rem 1.1rem;margin:0 0 1rem;}
+.ai-sec--news{border-left-color:#4f46e5;}
+.ai-sec--bias{border-left-color:#dc2626;}
+.ai-sec--advice{border-left-color:#f59e0b;}
+.ai-sec--tomorrow{border-left-color:#0ea5e9;}
+.ai-sec--lesson{border-left-color:#8b5cf6;}
+.ai-sec h2{font-size:1.05rem;font-weight:700;color:#1f2937;margin:0 0 .6rem;display:flex;align-items:center;gap:.5rem;}
 .ai-sec h2 i{color:#4f46e5;font-size:1rem;}
-.ai-sec h4{font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin:.6rem 0 .25rem;}
-.ai-sec ul{margin:0;padding-left:1.15rem;}
-.ai-sec li{margin:.22rem 0;line-height:1.55;}
+.ai-sec h4{font-size:.76rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin:.65rem 0 .25rem;}
+.ai-sec ul{margin:0;padding-left:1.1rem;}
+.ai-sec li{margin:.25rem 0;line-height:1.55;}
 .ai-sec p{margin:.2rem 0 0;}
 .ai-fund{font-weight:600;color:#1f2937;}
-.ai-bull{color:#dc2626;font-weight:600;}
-.ai-bear{color:#059669;font-weight:600;}
-.ai-neutral{color:#94a3b8;font-weight:600;}
-.ai-action{display:inline-block;background:#f1f5f9;color:#475569;font-size:.78rem;font-weight:600;padding:1px 9px;border-radius:6px;}
-.ai-refs{color:#94a3b8;font-size:.8rem;margin:.2rem 0 .1rem;}
-.ai-refs span{margin-right:.45rem;}
+.ai-bull,.ai-bear,.ai-neutral,.ai-action{display:inline-block;font-size:.74rem;font-weight:600;padding:1px 9px;border-radius:999px;line-height:1.7;}
+.ai-bull{background:#fee2e2;color:#991b1b;}
+.ai-bear{background:#dcfce7;color:#065f46;}
+.ai-neutral{background:#f1f5f9;color:#64748b;}
+.ai-action{background:#eef2ff;color:#4338ca;}
+.ai-refs{color:#94a3b8;font-size:.8rem;margin:.25rem 0 .1rem;padding-left:.5rem;border-left:2px solid #f1f5f9;}
+.ai-refs span{display:block;margin:0;padding:0;}
 .ai-disclaimer{color:#94a3b8;font-size:.8rem;border-top:1px solid #e5e7eb;padding-top:.6rem;margin:0;}
 .ai-disclaimer i{color:#f59e0b;}
 </style>
 <div class="ai-report">
-  <section class="ai-sec">
+  <section class="ai-sec ai-sec--news">
     <h2><i class="bi bi-newspaper"></i>今日新闻速览</h2>
     {% for cat, label in cat_labels.items %}
       {% with items=analysis.market_brief|get:cat %}
@@ -30,24 +36,24 @@
     {% endfor %}
   </section>
 
-  <section class="ai-sec">
+  <section class="ai-sec ai-sec--bias">
     <h2><i class="bi bi-graph-up-arrow"></i>利好 / 利空方向</h2>
     <ul>
       {% for b in analysis.bias %}
-        <li><span class="ai-fund">{{ b.fund }}</span> ·
-          <span class="{% if b.direction == '利好' %}ai-bull{% elif b.direction == '利空' %}ai-bear{% else %}ai-neutral{% endif %}">{{ b.direction }}</span>
-          —— {{ b.reason }}
+        <li><span class="ai-fund">{{ b.fund }}</span> <span class="{% if b.direction == '利好' %}ai-bull{% elif b.direction == '利空' %}ai-bear{% else %}ai-neutral{% endif %}">{{ b.direction }}</span>
+          <div>{{ b.reason }}</div>
           {% if b.refs %}<div class="ai-refs">参考：{% for r in b.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% endfor %}</div>{% endif %}
         </li>
       {% empty %}<li class="muted">（暂无）</li>{% endfor %}
     </ul>
   </section>
 
-  <section class="ai-sec">
+  <section class="ai-sec ai-sec--advice">
     <h2><i class="bi bi-briefcase"></i>仓位建议（明日）</h2>
     <ul>
       {% for a in analysis.position_advice %}
-        <li><span class="ai-fund">{{ a.fund }}</span> → <span class="ai-action">{{ a.action }}</span>：{{ a.reason }}
+        <li><span class="ai-fund">{{ a.fund }}</span> <span class="ai-action">{{ a.action }}</span>
+          <div>{{ a.reason }}</div>
           {% if a.refs %}<div class="ai-refs">参考：{% for r in a.refs %}<span>[{{ r.kind }}] {{ r.text }}</span>{% endfor %}</div>{% endif %}
         </li>
       {% empty %}<li class="muted">（暂无）</li>{% endfor %}
@@ -55,14 +61,14 @@
   </section>
 
   {% if analysis.tomorrow %}
-  <section class="ai-sec">
+  <section class="ai-sec ai-sec--tomorrow">
     <h2><i class="bi bi-sun"></i>明日预判</h2>
     <ul>{% for e in analysis.tomorrow.events %}<li>{{ e.time }} {{ e.event }}</li>{% endfor %}</ul>
     {% if analysis.tomorrow.watch %}<p class="muted">关注：{{ analysis.tomorrow.watch }}</p>{% endif %}
   </section>
   {% endif %}
 
-  <section class="ai-sec">
+  <section class="ai-sec ai-sec--lesson">
     <h2><i class="bi bi-mortarboard"></i>小白课堂</h2>
     {% if analysis.lesson.title %}<div class="ai-fund" style="margin-bottom:.15rem">{{ analysis.lesson.title }}</div>{% endif %}
     {% if analysis.lesson.body %}<p>{{ analysis.lesson.body }}</p>{% endif %}

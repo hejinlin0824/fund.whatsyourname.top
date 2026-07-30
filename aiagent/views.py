@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from .models import AnalysisReport
 from .forms import DeepSeekKeyForm
 from . import services
+from funds.services import portfolio_snapshot
 
 ON_DEMAND_DAILY_LIMIT = 5
 
@@ -32,7 +33,9 @@ def report_delete(request, pk):
 @login_required
 def report_detail(request, pk):
     rep = get_object_or_404(AnalysisReport, pk=pk, user=request.user)
-    return render(request, "aiagent/report_detail.html", {"report": rep})
+    snap = portfolio_snapshot(request.user)
+    snap_d = {k: float(snap[k]) for k in ("total_mv", "total_cost", "total_profit", "total_roi")}
+    return render(request, "aiagent/report_detail.html", {"report": rep, "snap": snap_d})
 
 
 @login_required

@@ -2,7 +2,9 @@
 {% block title %}AI 报告 · Whatsyour{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h4 class="section-title">AI 报告</h4>
+  <h4 class="section-title mb-0"><i class="bi bi-robot text-primary"></i> AI 报告
+    <span class="muted" style="font-size:.8rem;font-weight:400">共 {{ reports|length }} 份</span>
+  </h4>
   <a class="btn btn-outline-secondary btn-sm" href="{% url 'aiagent:key-settings' %}"><i class="bi bi-key"></i> DeepSeek Key</a>
 </div>
 <div class="panel mb-3 d-flex flex-wrap align-items-center gap-3">
@@ -11,7 +13,7 @@
       <i class="bi bi-lightning-charge"></i> 立即分析
     </button>
   </form>
-  <span class="muted small">今日还剩 <strong>{{ remaining }}</strong>/{{ limit }} 次</span>
+  <span class="muted small">今日还剩 <strong>{{ remaining }}</strong>/{{ limit }} 次 · 定时 12:30 / 18:00 自动生成</span>
 </div>
 <div class="panel">
   <div class="table-responsive">
@@ -20,7 +22,7 @@
     <tbody>
     {% for r in reports %}
       <tr>
-        <td>{{ r.get_type_display }}</td>
+        <td><i class="bi {% if r.type == 'morning' %}bi-sun{% elif r.type == 'evening' %}bi-moon-stars{% else %}bi-lightning-charge{% endif %} text-primary"></i> {{ r.get_type_display }}</td>
         <td class="muted">{{ r.date }}</td>
         <td><span class="badge bg-{% if r.status == 'ok' %}success{% elif r.status == 'degraded' %}warning{% else %}danger{% endif %}">{{ r.get_status_display }}</span></td>
         <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="{% url 'aiagent:report-detail' r.id %}">查看</a></td>
