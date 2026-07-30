@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "accounts",
     "funds",
     "news",
+    "aiagent",
     "rest_framework",
 ]
 
@@ -82,6 +83,7 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+SITE_HOST = os.environ.get("SITE_HOST", "http://49.234.26.95:8188")
 
 # DRF
 REST_FRAMEWORK = {"DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"]}

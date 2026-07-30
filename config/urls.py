@@ -7,5 +7,6 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("funds/", include("funds.urls")),
     path("news/", include("news.urls")),
+    path("aiagent/", include("aiagent.urls")),
     path("", fund_views.dashboard, name="dashboard"),
 ]
