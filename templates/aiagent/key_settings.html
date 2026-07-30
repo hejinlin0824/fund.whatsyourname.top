@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>DeepSeek API Key</h1>
+<div class="panel">
+  {% if has_key %}
+    <p class="muted">已设置 Key（出于安全不显示）。留空提交可清除。</p>
+  {% else %}
+    <p class="muted">尚未设置。填入你的 DeepSeek API Key 后保存。</p>
+  {% endif %}
+  <form method="post">{% csrf_token %}
+    <div class="mb-2">{{ form.deepseek_key.label_tag }}{{ form.deepseek_key }}</div>
+    <button type="submit" class="btn btn-primary">保存</button>
+  </form>
+</div>
+{% endblock %}

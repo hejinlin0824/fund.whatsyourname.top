@@ -3,6 +3,7 @@ from django.db import models
 CATEGORY_CHOICES = [
     ("politics", "时政国际"),
     ("finance", "A股财经"),
+    ("finance_oversea", "海外财经"),
     ("tech_cn", "国内科技"),
     ("tech_oversea", "海外科技"),
 ]

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{% url 'aiagent:report-list' %}">← 返回列表</a>
+<h1>{{ report.get_type_display }}报告 · {{ report.date }}
+  <span class="badge bg-{% if report.status == 'ok' %}success{% elif report.status == 'degraded' %}warning{% else %}danger{% endif %}">{{ report.get_status_display }}</span>
+</h1>
+<div class="panel">{{ report.content_html|safe }}</div>
+{% endblock %}

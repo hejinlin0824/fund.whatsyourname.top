@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>AI 报告</h1>
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <form method="post" action="{% url 'aiagent:on-demand' %}">{% csrf_token %}
+    <button type="submit" class="btn btn-primary btn-sm">⚡ 立即分析（每日 5 次）</button>
+  </form>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'aiagent:key-settings' %}">DeepSeek Key 设置</a>
+</div>
+{% if reports %}
+<ul class="list-group">
+  {% for r in reports %}
+    <li class="list-group-item">
+      <a href="{% url 'aiagent:report-detail' r.id %}">{{ r.get_type_display }} · {{ r.date }} · {{ r.get_status_display }}</a>
+    </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">还没有 AI 报告。填好 DeepSeek Key 后点「立即分析」，或等午间/晚间自动生成。</p>
+{% endif %}
+{% endblock %}
