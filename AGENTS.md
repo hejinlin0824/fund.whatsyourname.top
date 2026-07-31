@@ -5,12 +5,13 @@
 ## 一句话
 个人基金仓位与盈亏监控网站（Django + SQLite），邮件驱动录入每日盈亏，系统反推每日总额；附带新闻聚合模块（为后续 AI 投喂做语料）。**场外基金为主，A股+美股。**
 
-- **线上**：`http://49.234.26.95:8188/`（Django runserver，DEBUG，开发用）
+- **线上**：`https://fund.whatsyourname.top/`（nginx + Let's Encrypt HTTPS → 反代 :8188，**DEBUG=False 生产**；DNSPod 解析 `fund` A→49.234.26.95）
+- **直连调试**：`http://49.234.26.95:8188/`（8188 仍开，方便调试）
 - **项目路径**：服务器 `~/home/claude_PJ/Jijin_Kanban/`
 - **本地暂存**：`E:\codebase\server_stuff\_jk\`（改文件在这里改，再 scp 上去）
 
 ## 技术栈
-Python 3.12 · Django 6.0.1 · SQLite · Bootstrap 5 + Chart.js · DRF · QQ SMTP · cron + management commands（**无 Celery**）。venv 在项目根 `venv/`。
+Python 3.12 · Django 6.0.1 · SQLite · Bootstrap 5 + Bootstrap Icons + Chart.js · DRF · QQ SMTP · cron + management commands（**无 Celery**）。aiagent 用 DeepSeek API + cryptography(Fernet 加密 key)。venv 在项目根 `venv/`。
 
 ## ⚠️ 开发工作流（重要，省额度）
 用户要求**用脚本一次性做事，不要反复 ssh/scp 调 API**。标准循环：
@@ -45,11 +46,14 @@ Python 3.12 · Django 6.0.1 · SQLite · Bootstrap 5 + Chart.js · DRF · QQ SMT
 ```
 
 ## AI 智能体分析（aiagent）
-每日结合新闻+仓位生成 AI 报告，午间(12:30)/晚间(18:00)各发一封邮件，站内 `/aiagent/` 可翻阅历史 + 「立即分析」(每日 5 次)。
-- **两段式流水线（省 token）**：①`screening` 喂当天全部标题(chat)挑出值得深读的~15条 → ②`analysis` 只对这些取摘要+仓位深读(午=chat / 晚=reasoner) → 结构化 JSON → `reports.render` 成 5 段 HTML（新闻速览/利好方向/仓位建议/明日预判/小白课堂 + 免责声明）。
-- **激活前提**：用户必须在 `/aiagent/key/` 填入自己的 DeepSeek key（Fernet 加密存 `accounts.User.deepseek_key_enc`，密钥 `JK_FERNET_KEY` 在 `.env`）。没填 → 定时命令跳过该用户、手动触发跳转去填 key。
+每日结合新闻+仓位生成 AI 报告，午间(12:30)/晚间(18:00)各发一封邮件，站内 `/aiagent/` 可翻阅历史 + 「立即分析」(每日 5 次；列表显示"今日还剩 N/5"、生成时按钮转圈、详情页可删除)。
+- **两段式流水线（省 token）**：①`screening` 喂当天全部标题(chat)挑值得深读的~15条 → ②`analysis` 只对这些取摘要+仓位深读 → 结构化 JSON → `reports.render` 成 5 段卡片（新闻速览/利好方向/仓位建议/明日预判/小白课堂 + 免责声明）。全站无 emoji，用 Bootstrap Icons。
+- **模型按时段**：午间 cron / 手动 <15 点 → `noon` 模式(chat，**无明日预判**)；晚间 cron / 手动 ≥15 点 → `evening` 模式(reasoner，**含明日预判**)。利好=红/利空=绿（同全站惯例）。
+- **引用标注 refs**：每条利好/仓位建议必须带 `refs`——仓位参考具体到哪只基金+现状、新闻参考点明标题，渲染成"参考：…"，让结论可追溯。
+- **操作追踪注入**：新增/编辑基金时 `funds/actions.py` 记 `ActionLog`（新增/调额/停投/恢复/清仓/改名），当日 AI 总结注入"【今日操作】…"告诉 AI 你今天动了什么。
+- **激活前提**：用户在 `/aiagent/key/` 填 DeepSeek key（Fernet 加密存 `accounts.User.deepseek_key_enc`，密钥 `JK_FERNET_KEY` 在 `.env`）。没填 → 定时跳过、手动触发跳去填。
 - **降级**：key 缺失/失效/限流/坏 JSON → 发降级邮件（正文置顶说明 + 当日新闻标题清单），报告 `status=degraded`，绝不静默。
-- **仓位上下文**：`funds/services.portfolio_snapshot(user)` 返回纯数据 dict（aiagent 不翻 funds 内部）。
+- **仓位上下文**：`funds/services.portfolio_snapshot(user)` 返回纯数据 dict（aiagent 不翻 funds 内部）；报告详情页顶部还展示实时持仓 stat 行（总市值/投入/盈亏/收益率）。
 - 设计 `docs/superpowers/specs/2026-07-30-ai-agent-analysis-design.md`，计划 `docs/superpowers/plans/2026-07-30-ai-agent-analysis.md`。
 
 ## 核心领域逻辑（最容易改错的地方）
@@ -86,18 +90,22 @@ total_t = running + invested_t×(1−fee_rate) + profit_t
 ```
 0 18,21,23 * * *  ... send_daily_email --reminder 1/2/3   # 工作日阶梯提醒
 30 23 * * *       ... finalize_daily                       # 未录入标无交易
-0 */3 * * *       ... fetch_news                           # 新闻抓取
+0 */3 * * *       ... fetch_news                           # 新闻抓取（全量慢，HN 串行 31 请求）
+30 12 * * *       ... run_ai_morning                       # 午间 AI 报告（chat，无明日预判）
+0  18 * * *       ... run_ai_evening                       # 晚间 AI 报告（reasoner，含明日预判）
 ```
 - 工作日未录入才发提醒；周末仅问候。magic link 点开自动登录到当日录入页。
+- AI 命令遍历 `is_active & email_verified & 已填 DeepSeek key` 的用户。
 
 ## 新闻模块
-- 4 分类：时政国际 / A股财经 / 国内科技 / 海外科技。
-- 数据源：中新网 7 个 RSS（politics/finance）、HackerNews API（tech_oversea）、AkShare（finance）。
-- **国内科技分类暂无源**（36氪 RSS 已死）——补源去 `/admin/news/source/` 加一条，不用改代码。
+- 5 分类：时政国际 / A股财经 / **海外财经(finance_oversea)** / 国内科技 / 海外科技。
+- 数据源：中新网 7 个 RSS（politics/finance）、HackerNews API（tech_oversea）、AkShare（finance）、**CNBC×2 + NPR Business（finance_oversea，美股/美国经济）**。
+- **国内科技分类暂无源**（36氪 RSS 已死）——补源去 `/admin/news/source/` 加一条（kind=RSS，选 category），不用改代码。
+- ⚠️ `fetch_news` 全量跑慢，卡在 HackerNews（串行 31 请求 ×15s 超时）；单抓某源用 `fetch_news --source <slug>`。
 - DRF：`/news/api/articles/?category=&search=`，`/news/api/articles/export/?start=&end=` 批量导出喂 AI。
 
 ## 测试
-`venv/bin/python manage.py test`（约 60 项，含 cleaners/计算/CRUD/录入/邮件命令）。改逻辑务必配套测试，deploy.sh 会跑。
+`venv/bin/python manage.py test`（约 100 项，含 cleaners/计算/CRUD/录入/邮件/aiagent 全套：client/screening/analysis/reports/services/tracking/views）。改逻辑务必配套测试，deploy.sh 会跑。
 
 ## 常见坑
 - **logout 必须 POST**（Django 5+ LogoutView 拒绝 GET）——导航里用 form。
@@ -107,7 +115,8 @@ total_t = running + invested_t×(1−fee_rate) + profit_t
 - 表单日期字段用 `DateInput(format="%Y-%m-%d")`，否则编辑时起购日不回填。
 
 ## 账号 & 密钥
-- 测试账号：`hejinlin` / `ll990824`。
+- 主力账号：`hejinlin` / `ll990824`（邮箱 1285021260@qq.com，已填 DeepSeek key，AI 邮件发这）。
+- 演示账号：`yanshi` / `123456`（邮箱 hejinlindeyouxiang@gmail.com，数据复制自 hejinlin）。
 - SMTP 授权码在 `.env` 的 `EMAIL_HOST_PASSWORD`（QQ 邮箱授权码，非登录密码）。**曾在对话泄露，用户应已旋转**。
 - `SECRET_KEY` 也在 `.env`。
 
