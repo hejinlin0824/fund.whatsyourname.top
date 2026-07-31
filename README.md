@@ -10,6 +10,7 @@
 
 - **基金仓位 / 盈亏**：邮件驱动录入每日盈亏，系统**反推每日总额**
   `V_t = V_{t-1} + profit + invested×(1−fee_rate)`；申购费率自动扣；A股 T+1 / 美股 T+2 待确认；日历视图、组合看板、走势图。
+- **定投微笑曲线 & 净值预填**：akshare 按代码拉历史净值 → 算**平均持仓成本(元/份)**画微笑曲线（每只基金净值×均价、组合成本×市值红绿盈亏）；每日盈亏**按净值自动预填**（A股准，QDII 处理滞后），省掉手查手填。
 - **新闻聚合**：5 分类（时政 / A股 / 海外财经 / 国内科技 / 海外科技），RSS + HackerNews + AkShare，数据源**可插拔**（失效改 URL 即可），DRF 支持批量导出喂 AI。
 - **AI 智能体分析**：每日 **12:30 / 18:00** 结合新闻 + 仓位生成报告（**两段式 LLM**：标题初筛 → 深度分析），邮件推送 + 站内历史 + 按需生成；每条建议带**仓位/新闻引用**，结论可追溯。
 
@@ -35,12 +36,13 @@ Jijin_Kanban/
 │  └─ views.py / forms.py / urls.py
 │
 ├─ funds/                       # 核心：基金 / 每日记录 + 计算服务 + 录入与报表
-│  ├─ models.py                 #   Fund / Tag / DailyRecord（unique fund+date）
+│  ├─ models.py                 #   Fund / Tag / DailyRecord / FundNav（按代码缓存净值）
 │  ├─ services.py               #   recompute_fund_totals / backfill_fund / fund_summary / portfolio_snapshot ★
+│  ├─ nav.py                    #   ★ 微笑曲线 + 净值盈亏估算（fund_dca_curve / estimate_profit）
 │  ├─ actions.py                #   ActionLog：记录新增/调额/停投/清仓/改名（喂给当日 AI）
 │  ├─ forms.py                  #   中文友好表单
 │  ├─ views.py                  #   fund_list/detail/create/edit、daily_entry、dashboard、calendar、portfolio
-│  └─ management/commands/      #   send_daily_email（阶梯提醒）、finalize_daily（未录入标无交易）
+│  └─ management/commands/      #   send_daily_email / finalize_daily / fetch_fund_navs（拉净值）
 │
 ├─ news/                        # 新闻：Source / Article + 抓取 / 清洗 / DRF
 │  ├─ models.py                 #   Source(可插拔) / Article；5 分类
@@ -95,6 +97,7 @@ Jijin_Kanban/
 0  */3 * * *       ... fetch_news                           # 新闻抓取（每 3 小时）
 30 12 * * *        ... run_ai_morning                       # 午间 AI 报告（chat）
 0  18 * * *        ... run_ai_evening                       # 晚间 AI 报告（reasoner）
+0  20 * * *        ... fetch_fund_navs                      # 拉基金历史净值（微笑曲线/盈亏预填）
 ```
 
 ---

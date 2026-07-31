@@ -31,10 +31,12 @@ Python 3.12 · Django 6.0.1 · SQLite · Bootstrap 5 + Bootstrap Icons + Chart.j
 ├─ manage.py
 ├─ config/                    # settings.py / urls.py / wsgi.py
 ├─ accounts/                  # 用户：注册/邮箱验证/magic-link 免密登录
-├─ funds/                     # 核心：Fund/Tag/DailyRecord + 计算服务 + 录入/报表
-│   ├─ services.py            # ★ 计算逻辑（纯函数，重点）
+├─ funds/                     # 核心：Fund/Tag/DailyRecord/FundNav + 计算服务 + 录入/报表
+│   ├─ services.py            # ★ 总额反推等计算逻辑
+│   ├─ nav.py                 # ★ 微笑曲线 + 净值盈亏估算（fund_dca_curve/estimate_profit）
+│   ├─ actions.py             # ActionLog 操作记录（喂 AI）
 │   ├─ forms.py               # 友好表单（中文标签/必填星标/释义）
-│   └─ management/commands/   # send_daily_email / finalize_daily
+│   └─ management/commands/   # send_daily_email / finalize_daily / fetch_fund_navs
 ├─ news/                      # 新闻：Source/Article + 抓取/清洗/DRF
 │   ├─ cleaners.py / fetchers.py / api.py
 │   └─ management/commands/fetch_news.py
@@ -78,11 +80,18 @@ total_t = running + invested_t×(1−fee_rate) + profit_t
 - `dca_invest_for(d)`：停投后(end_date 之后)投入自动 0。
 - `confirm_delay`（A股 T+1 / 美股 T+2）→ `compute_pending` 算"待确认"。
 
+## 微笑曲线 & 净值盈亏（FundNav）
+按 `Fund.code` 用 akshare 拉历史单位净值（`fetch_fund_navs`，每日 20:00 cron），缓存到 `FundNav(code,date,unit_nav)`（跨用户共享）。
+- **定投微笑曲线**（`funds/nav.py: fund_dca_curve`）：逐日 `份额 = 有效投入 ÷ 当日净值`，累加得累计份额/成本 → **平均持仓成本 = 累计成本 ÷ 累计份额（元/份）**。基金详情页画「净值线 × 均价线」；组合页画「累计成本 × 总市值 + 红绿盈亏填充」。
+- **每日盈亏按净值预填**（`estimate_profit`）：录入页对未填的基金按 `份额 × (今日净值 − 前日净值)` 自动估算预填，A股准；QDII 按 `confirm_delay` 偏移处理净值发布滞后（可能为空需手填）。用户确认即存。
+- 起购前已有持仓(`start_total>0`)按起购日净值折算初始份额；T+1 确认延迟用当日净值近似。
+
 ## 数据模型
 - **accounts.User**（AbstractUser）+ `email_verified` + `mail_login_token`（magic link 令牌）
 - **funds.Fund**：name/code/market/confirm_delay/invest_amount/invest_frequency/fee_rate/start_date/start_total/is_active/end_date/is_cleared/tags
 - **funds.DailyRecord**：fund/date(profit 可空)/profit_ratio/invested/total(可空=None=未知)/pending/has_trade；unique(fund,date)
 - **funds.Tag**：user/name
+- **funds.FundNav**：code/date/unit_nav（按代码缓存、跨用户共享，akshare 拉；用于微笑曲线 + 盈亏预填）
 - **news.Source**：name/slug/kind(RSS/HN/AKSHARE)/category/url/enabled（**可插拔**，RSS 失效改 url 即可）
 - **news.Article**：title/summary/content/url(唯一)/published_at/category/source/extra(JSON预留)/funds(M2M预留)
 
@@ -93,6 +102,7 @@ total_t = running + invested_t×(1−fee_rate) + profit_t
 0 */3 * * *       ... fetch_news                           # 新闻抓取（全量慢，HN 串行 31 请求）
 30 12 * * *       ... run_ai_morning                       # 午间 AI 报告（chat，无明日预判）
 0  18 * * *       ... run_ai_evening                       # 晚间 AI 报告（reasoner，含明日预判）
+0  20 * * *       ... fetch_fund_navs                      # 拉基金历史净值（微笑曲线/盈亏预填）
 ```
 - 工作日未录入才发提醒；周末仅问候。magic link 点开自动登录到当日录入页。
 - AI 命令遍历 `is_active & email_verified & 已填 DeepSeek key` 的用户。
