@@ -53,8 +53,20 @@ def fund_dca_curve(fund):
 
 
 def estimate_profit(fund, d):
-    """某日按净值的估算盈亏（录入预填用）。无净值/无前日净值返回 None。"""
-    for p in fund_dca_curve(fund):
-        if p["date"] == d.isoformat():
-            return p["est_profit"]
-    return None
+    """按净值估算用户在日期 d 的盈亏（录入预填用）。
+    考虑 QDII/美股净值发布滞后（confirm_delay：A股=0偏移、T+2=1偏移）。
+    所需净值尚未发布则返回 None。"""
+    nav = nav_map(fund.code)
+    if not nav:
+        return None
+    shift = max(0, (fund.confirm_delay or 1) - 1)        # A股 0 / 美股QDII 1
+    upto = sorted(x for x in nav if x <= d)
+    if len(upto) < shift + 2:
+        return None
+    tod, prev = upto[-1 - shift], upto[-2 - shift]
+    shares, _ = _initial_shares(fund, nav)
+    for r in fund.records.filter(date__lt=tod, has_trade=True).order_by("date"):
+        nv = nav.get(r.date)
+        if nv:
+            shares += fund.effective_invested(r.invested or 0) / Decimal(nv)
+    return float((shares * (Decimal(nav[tod]) - Decimal(nav[prev]))).quantize(Decimal("0.01")))

@@ -11,6 +11,7 @@
 </div>
 
 {% if saved %}<div class="alert alert-success py-2">{{ date }} 保存成功</div>{% endif %}
+{% if estimated %}<div class="alert alert-info py-2 d-flex align-items-center gap-2"><i class="bi bi-magic"></i><span>未填的盈亏已按<b>净值自动估算</b>预填（A股准；QDII 净值滞后 1-2 天，可能为空需手填），确认无误即可保存。</span></div>{% endif %}
 
 <div class="panel">
   <form method="post">
@@ -24,7 +25,7 @@
       {% for form, fund in pairs %}
         <tr>
           <td><strong>{{ fund.name }}</strong><div class="muted" style="font-size:.73rem">{{ fund.get_invest_frequency_display }} · {{ fund.invest_amount }} · T+{{ fund.confirm_delay }}</div>{{ form.fund }}</td>
-          <td>{{ form.invested }}</td><td>{{ form.profit }}</td><td>{{ form.profit_ratio }}</td>
+          <td>{{ form.invested }}</td><td>{{ form.profit }}{% if fund.id in estimated %} <span class="badge text-bg-info ms-1">估算</span>{% endif %}</td><td>{{ form.profit_ratio }}</td>
         </tr>
       {% endfor %}
       </tbody>

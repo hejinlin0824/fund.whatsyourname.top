@@ -123,13 +123,22 @@ def daily_entry(request):
             _recompute_all(funds)
             return redirect(saved_back)
 
+    from .nav import estimate_profit
     initial = []
+    estimated = set()
     for f in funds:
         rec = f.records.filter(date=d).first()
         invested = rec.invested if rec else f.dca_invest_for(d)
+        if rec and rec.has_trade and rec.profit is not None:
+            profit_val = rec.profit
+        else:
+            est = estimate_profit(f, d)
+            profit_val = Decimal(str(est)).quantize(Decimal("0.01")) if est is not None else ""
+            if est is not None:
+                estimated.add(f.id)
         initial.append({
             "fund": f.id,
-            "profit": rec.profit if (rec and rec.has_trade and rec.profit is not None) else "",
+            "profit": profit_val,
             "profit_ratio": rec.profit_ratio if rec else "",
             "invested": invested,
         })
@@ -142,6 +151,7 @@ def daily_entry(request):
     earliest = min((f.start_date for f in funds), default=d)
     context = {
         "formset": formset, "pairs": pairs, "date": d, "saved": request.GET.get("saved") == "1",
+        "estimated": estimated,
         "prev_date": prv if prv >= earliest else None,
         "next_date": nxt if nxt <= today else None,
     }
