@@ -94,3 +94,17 @@ class DailyRecord(models.Model):
 
     def __str__(self):
         return f"{self.fund.name} {self.date} total={self.total}"
+
+
+class FundNav(models.Model):
+    """基金历史单位净值（按代码缓存，跨用户共享）。用于微笑曲线 + 盈亏估算。"""
+    code = models.CharField(max_length=16, db_index=True)
+    date = models.DateField()
+    unit_nav = models.DecimalField(max_digits=10, decimal_places=4)
+
+    class Meta:
+        unique_together = ("code", "date")
+        ordering = ["date"]
+
+    def __str__(self):
+        return f"{self.code} {self.date} nav={self.unit_nav}"
