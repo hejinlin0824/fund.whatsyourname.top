@@ -15,7 +15,7 @@
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="panel"><h6 class="section-title mb-2">组合总市值走势</h6><div style="height:300px"><canvas id="valueChart"></canvas></div></div>
+    <div class="panel"><h6 class="section-title mb-2">累计成本 × 总市值 <span class="muted" style="font-size:.75rem;font-weight:400">绿=浮盈 · 红=浮亏</span></h6><div style="height:300px"><canvas id="valueChart"></canvas></div></div>
   </div>
   <div class="col-12 col-lg-7">
     <div class="panel h-100"><h6 class="section-title mb-2">每日总盈亏 <span class="muted" style="font-size:.75rem;font-weight:400">红=盈利 · 绿=亏损</span></h6>
@@ -31,7 +31,7 @@
 let barItems=[];
 const lp={id:'bl',afterDatasetsDraw(c){const ctx=c.ctx,m=c.getDatasetMeta(0);m.data.forEach((b,i)=>{const v=barItems[i];ctx.fillStyle=v>0?'#dc2626':'#059669';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText((v>0?'+':'')+v.toFixed(2),b.x+4,b.y);});}};
 fetch("{% url 'portfolio-data' %}").then(r=>r.json()).then(d=>{
-  new Chart(document.getElementById('valueChart'),{type:'line',data:{labels:d.dates,datasets:[{label:'组合总市值',data:d.value,borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.1}]},options:{maintainAspectRatio:false}});
+  new Chart(document.getElementById('valueChart'),{type:'line',data:{labels:d.dates,datasets:[{label:'累计成本',data:d.cost,borderColor:'#94a3b8',tension:.1,fill:false,pointRadius:0,borderWidth:2},{label:'组合总市值',data:d.value,borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.12)',tension:.1,pointRadius:0,borderWidth:2,fill:{target:0,above:'rgba(5,150,105,.20)',below:'rgba(220,38,38,.20)'}}]},options:{maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11}}}}}});
   barItems=d.profit.filter(v=>v!==0);
   const dates=d.dates.filter((_,i)=>d.profit[i]!==0);
   const w=document.getElementById('barWrap');w.style.height=Math.max(200,barItems.length*22)+'px';

@@ -39,6 +39,12 @@
   <div style="height:340px"><canvas id="trendChart"></canvas></div>
 </div>
 
+<div class="panel mb-3" id="smilePanel" style="display:none">
+  <h6 class="section-title mb-2">定投微笑曲线 <span class="muted" style="font-size:.75rem;font-weight:400">基金单位净值 × 你的平均持仓成本（元/份）</span></h6>
+  <div style="height:300px"><canvas id="smileChart"></canvas></div>
+  <p class="muted small mt-2 mb-0">均价随定投摊薄走低；净值跌向/跌破均价=浮亏区间，反弹回均价上方=浮盈。</p>
+</div>
+
 <div class="panel">
   <h6 class="section-title mb-2">每日盈亏 <span class="muted" style="font-size:.75rem;font-weight:400">红=盈利 · 绿=亏损</span></h6>
   <div style="max-height:520px;overflow:auto">
@@ -48,7 +54,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script>
-let allData=null,chart=null,barChart=null,view='day',metric='total',barItems=[];
+let allData=null,chart=null,barChart=null,smileChart=null,view='day',metric='total',barItems=[];
 function syncBtns(k,v){document.querySelectorAll('[data-'+k+']').forEach(b=>b.classList.toggle('active',b.dataset[k]===v));}
 function setView(v){view=v;syncBtns('view',v);if(allData)render();}
 function setMetric(m){metric=m;syncBtns('metric',m);if(allData)render();}
@@ -58,6 +64,7 @@ const SERIES={total:{label:'总额',color:'#4f46e5',fill:true},profit:{label:'�
 function render(){const g=aggregate(view);const w=metric==='all'?['total','profit','invested']:[metric];const ds=w.map(k=>({label:SERIES[k].label,data:g[k],borderColor:SERIES[k].color,backgroundColor:SERIES[k].color+'22',tension:.1,fill:SERIES[k].fill}));if(chart)chart.destroy();chart=new Chart(document.getElementById('trendChart'),{type:'line',data:{labels:g.labels,datasets:ds},options:{maintainAspectRatio:false,scales:{y:{position:'left'}}}});}
 const barLabelPlugin={id:'bl',afterDatasetsDraw(c){const ctx=c.ctx,m=c.getDatasetMeta(0);m.data.forEach((b,i)=>{const v=barItems[i];ctx.fillStyle=v>0?'#dc2626':'#059669';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText((v>0?'+':'')+v.toFixed(2),b.x+4,b.y);});}};
 function renderBars(){barItems=[];const dates=[];allData.dates.forEach((iso,i)=>{const p=allData.profits[i];if(p!==null&&p!==undefined&&parseFloat(p)!==0){barItems.push(parseFloat(p));dates.push(iso);}});const w=document.getElementById('barWrap');w.style.height=Math.max(200,barItems.length*22)+'px';if(barChart)barChart.destroy();if(barItems.length===0){w.innerHTML='<p class="muted p-2 mb-0">没有盈亏数据</p>';return;}barChart=new Chart(document.getElementById('profitBar'),{type:'bar',data:{labels:dates,datasets:[{data:barItems.map(v=>Math.abs(v)),backgroundColor:barItems.map(v=>v>0?'#dc2626':'#059669'),borderRadius:3,maxBarThickness:14}]},options:{indexAxis:'y',maintainAspectRatio:false,responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(barItems[c.dataIndex]>0?'+':'')+barItems[c.dataIndex].toFixed(2)}}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:10}}}}},plugins:[barLabelPlugin]});}
-fetch("{% url 'fund-detail-data' fund.pk %}").then(r=>r.json()).then(d=>{allData=d;syncBtns('view','day');syncBtns('metric','total');if(allData.dates.length===0){document.getElementById('trendChart').parentElement.innerHTML='<p class="muted">还没有录入数据。</p>';return;}render();renderBars();});
+function renderSmile(){const c=allData.curve;if(!c||!c.dates||!c.dates.length){return;}document.getElementById('smilePanel').style.display='block';if(smileChart)smileChart.destroy();smileChart=new Chart(document.getElementById('smileChart'),{type:'line',data:{labels:c.dates,datasets:[{label:'基金单位净值',data:c.nav,borderColor:'#0ea5e9',tension:.1,fill:false,pointRadius:0,borderWidth:2},{label:'平均持仓成本',data:c.avg_cost,borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.10)',tension:.1,pointRadius:0,borderWidth:2,fill:'-1'}]},options:{maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11}}}}}});}
+fetch("{% url 'fund-detail-data' fund.pk %}").then(r=>r.json()).then(d=>{allData=d;syncBtns('view','day');syncBtns('metric','total');if(allData.dates.length===0){document.getElementById('trendChart').parentElement.innerHTML='<p class="muted">还没有录入数据。</p>';return;}render();renderBars();renderSmile();});
 </script>
 {% endblock %}
