@@ -14,8 +14,11 @@ class Command(BaseCommand):
         except Exception:
             self.stderr.write("akshare 未安装")
             return
-        codes = list(Fund.objects.exclude(code="").exclude(code__isnull=True)
-                     .values_list("code", flat=True).distinct())
+        # 用 set() 显式去重：.distinct() 受 Fund.Meta.ordering=["id"] 影响，在 SQLite
+        # 上 `SELECT DISTINCT code ... ORDER BY id` 仍返回重复行(实测 14 只基金→14
+        # 个代码，每个抓两遍，耗时翻倍)。set() 才能稳定去重为真实的不同代码。
+        codes = sorted(set(Fund.objects.exclude(code="")
+                           .values_list("code", flat=True)))
         if opts["code"]:
             codes = [c for c in codes if c == opts["code"]]
         total = 0

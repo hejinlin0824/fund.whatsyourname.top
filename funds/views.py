@@ -128,7 +128,9 @@ def daily_entry(request):
     estimated = set()
     for f in funds:
         rec = f.records.filter(date=d).first()
-        invested = rec.invested if rec else f.dca_invest_for(d)
+        # 仅当已有「真实交易」记录时沿用其投入额；finalize 占位(has_trade=False,
+        # invested=0)不应盖掉定投额度默认值，否则日历里每天投入都显示成 0。
+        invested = rec.invested if (rec and rec.has_trade) else f.dca_invest_for(d)
         if rec and rec.has_trade and rec.profit is not None:
             profit_val = rec.profit
         else:
@@ -210,6 +212,18 @@ def calendar_view(request):
             status = "empty"
         pcls = "up" if day_profit > 0 else ("down" if day_profit < 0 else "")
         days.append({"date": dt, "status": status, "profit": day_profit, "pcls": pcls})
+
+    # 热力图：按当月最大绝对盈亏归一化，幅度越大格子填色越深
+    # 红=盈利(#dc2626=220,38,38) / 绿=亏损(#059669=5,150,105)；alpha 0.12(最小可见)~0.57(当月最大)
+    mx = max((abs(float(d["profit"])) for d in days if d["profit"] != 0), default=0.0)
+    for d in days:
+        p = d["profit"]
+        if p != 0 and mx > 0:
+            a = 0.12 + 0.45 * (abs(float(p)) / mx)
+            rgb = "220,38,38" if p > 0 else "5,150,105"
+            d["bg"] = f"rgba({rgb},{a:.2f})"
+        else:
+            d["bg"] = ""
 
     cells = [None] * first.weekday() + days
     while len(cells) % 7 != 0:

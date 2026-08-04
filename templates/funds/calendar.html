@@ -8,8 +8,8 @@
 </div>
 
 <div class="mb-3 small">
-  <span class="me-3"><span style="display:inline-block;width:12px;height:12px;background:#fee2e2;border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 盈利</span>
-  <span class="me-3"><span style="display:inline-block;width:12px;height:12px;background:#dcfce7;border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 亏损</span>
+  <span class="me-3"><span style="display:inline-block;width:20px;height:12px;background:linear-gradient(to right,rgba(220,38,38,.12),rgba(220,38,38,.57));border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 盈利(深浅=幅度)</span>
+  <span class="me-3"><span style="display:inline-block;width:20px;height:12px;background:linear-gradient(to right,rgba(5,150,105,.12),rgba(5,150,105,.57));border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 亏损(深浅=幅度)</span>
   <span class="me-3"><span style="display:inline-block;width:12px;height:12px;background:#fffbeb;border:1px solid #ccc;border-radius:3px;vertical-align:middle"></span> 待补录</span>
   <span class="muted">点格子跳转录入</span>
 </div>
@@ -20,7 +20,7 @@
   {% for week in weeks %}
     <tr>
     {% for cell in week %}
-      <td class="{% if cell %}{% if cell.status == 'future' %}cal-future{% elif cell.pcls == 'up' %}cal-up{% elif cell.pcls == 'down' %}cal-down{% elif cell.status == 'pending' %}cal-pending{% else %}cal-zero{% endif %}{% if cell.date == today %} today{% endif %}{% endif %}">
+      <td class="{% if cell %}{% if cell.status == 'future' %}cal-future{% elif cell.pcls == 'up' %}cal-up{% elif cell.pcls == 'down' %}cal-down{% elif cell.status == 'pending' %}cal-pending{% else %}cal-zero{% endif %}{% if cell.date == today %} today{% endif %}{% endif %}"{% if cell.bg %} style="background:{{ cell.bg }}"{% endif %}>
         {% if cell %}
           {% if cell.status == 'future' %}
             <span class="d">{{ cell.date.day }}</span>

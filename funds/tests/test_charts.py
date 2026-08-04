@@ -33,3 +33,22 @@ class ChartEndpointTest(TestCase):
         data = r.json()
         self.assertIn("cost", data)
         self.assertEqual(len(data["cost"]), len(data["value"]))
+
+    def test_calendar_heatmap_scales_with_magnitude(self):
+        """当日盈亏幅度越大格子填色越深(热力图)；0 盈亏无填充。"""
+        DailyRecord.objects.create(fund=self.f, date=date(2026, 7, 3), invested=0,
+                                   profit=2, total=112, has_trade=True)   # 小幅盈利
+        # 7-01 profit=0、7-02 profit=10(当月最大)、7-03 profit=2
+        r = self.client.get(reverse("calendar"), {"year": 2026, "month": 7})
+        cells = {c["date"]: c for week in r.context["weeks"] for c in week if c}
+
+        def _alpha(bg):
+            return float(bg.split(",")[-1].rstrip(")"))
+
+        bg_big = cells[date(2026, 7, 2)]["bg"]    # +10
+        bg_small = cells[date(2026, 7, 3)]["bg"]  # +2
+        bg_zero = cells[date(2026, 7, 1)]["bg"]   # 0
+        self.assertIn("220,38,38", bg_big)        # 盈利=红
+        self.assertGreater(_alpha(bg_big), _alpha(bg_small))   # 幅度大→更深
+        self.assertAlmostEqual(_alpha(bg_big), 0.57)           # 当月最大 = 封顶
+        self.assertEqual(bg_zero, "")              # 0 盈亏不填色

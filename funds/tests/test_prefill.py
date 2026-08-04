@@ -26,3 +26,14 @@ class PrefillTest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "10.00")    # 100 份 × (1.1−1.0) = 10
         self.assertContains(r, "估算")      # 预填徽章
+
+    def test_invested_defaults_to_dca_for_no_trade_placeholder(self):
+        """finalize 占位(has_trade=False, invested=0)不应盖掉定投额度默认值。
+
+        之前「有占位记录就用记录里的 0」导致日历里每天投入都显示成 0；
+        修复后只有真实交易(has_trade=True)记录才沿用其投入额，否则按定投日给默认额度。
+        """
+        DailyRecord.objects.create(fund=self.f, date=date(2026, 7, 3),  # 周五 = DCA 日
+                                   invested=0, profit=0, has_trade=False)
+        r = self.client.get(reverse("daily-entry"), {"date": "2026-07-03"})
+        self.assertEqual(r.context["formset"][0].initial["invested"], Decimal("100"))

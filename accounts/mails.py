@@ -22,7 +22,7 @@ def send_verification_email(user, request):
 def send_daily_entry_email(user, host, reminder):
     """工作日录入提醒邮件，含 magic link（点开自动登录到今日录入页）。"""
     link = f"{host}/accounts/magic/{user.mail_login_token}/"
-    suffix = f"（第 {reminder} 次提醒）" if reminder > 1 else ""
+    suffix = f"（第 {reminder} 次提醒）"
     send_mail(
         subject=f"【基金看板】录入今日盈亏{suffix}",
         message=(f"今日有交易？点此录入（自动登录到今日）：\n{link}\n\n"
